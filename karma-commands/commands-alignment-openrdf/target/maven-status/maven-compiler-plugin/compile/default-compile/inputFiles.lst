@@ -1,0 +1,8 @@
+D:\Day_day_up\Web-Karma-master\karma-commands\commands-alignment-openrdf\src\main\java\edu\isi\karma\controller\command\worksheet\ApplyModelFromURLCommand.java
+D:\Day_day_up\Web-Karma-master\karma-commands\commands-alignment-openrdf\src\main\java\edu\isi\karma\controller\command\worksheet\ApplyModelFromURLCommandFactory.java
+D:\Day_day_up\Web-Karma-master\karma-commands\commands-alignment-openrdf\src\main\java\edu\isi\karma\util\SavedModelURLs.java
+D:\Day_day_up\Web-Karma-master\karma-commands\commands-alignment-openrdf\src\main\java\edu\isi\karma\controller\command\GetR2RMLModelURLsCommand.java
+D:\Day_day_up\Web-Karma-master\karma-commands\commands-alignment-openrdf\src\main\java\edu\isi\karma\controller\command\worksheet\ApplyHistoryFromR2RMLModelCommand.java
+D:\Day_day_up\Web-Karma-master\karma-commands\commands-alignment-openrdf\src\main\java\edu\isi\karma\controller\command\GetR2RMLModelURLsCommandFactory.java
+D:\Day_day_up\Web-Karma-master\karma-commands\commands-alignment-openrdf\src\main\java\edu\isi\karma\controller\command\worksheet\ApplyHistoryFromR2RMLModelCommandFactory.java
+D:\Day_day_up\Web-Karma-master\karma-commands\commands-alignment-openrdf\src\main\java\edu\isi\karma\kr2rml\KR2RMLMappingWriter.java

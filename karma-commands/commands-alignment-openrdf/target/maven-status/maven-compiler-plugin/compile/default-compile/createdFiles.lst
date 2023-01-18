@@ -1,0 +1,13 @@
+edu\isi\karma\util\SavedModelURLs.class
+edu\isi\karma\controller\command\worksheet\ApplyHistoryFromR2RMLModelCommand$JsonKeys.class
+edu\isi\karma\controller\command\worksheet\ApplyHistoryFromR2RMLModelCommandFactory$Arguments.class
+edu\isi\karma\controller\command\GetR2RMLModelURLsCommand.class
+edu\isi\karma\controller\command\worksheet\ApplyHistoryFromR2RMLModelCommand.class
+edu\isi\karma\controller\command\worksheet\ApplyModelFromURLCommandFactory.class
+edu\isi\karma\controller\command\worksheet\ApplyModelFromURLCommand.class
+edu\isi\karma\kr2rml\KR2RMLMappingWriter.class
+edu\isi\karma\controller\command\GetR2RMLModelURLsCommandFactory.class
+edu\isi\karma\controller\command\worksheet\ApplyHistoryFromR2RMLModelCommandFactory.class
+edu\isi\karma\controller\command\worksheet\ApplyHistoryFromR2RMLModelCommand$1.class
+edu\isi\karma\controller\command\GetR2RMLModelURLsCommand$1.class
+edu\isi\karma\controller\command\worksheet\ApplyModelFromURLCommandFactory$Arguments.class

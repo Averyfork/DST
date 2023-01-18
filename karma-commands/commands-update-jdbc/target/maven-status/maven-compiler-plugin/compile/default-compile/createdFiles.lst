@@ -1,0 +1,4 @@
+edu\isi\karma\controller\update\DatabaseTablesListUpdate$JsonKeys.class
+edu\isi\karma\controller\update\DatabaseTablePreviewUpdate$JsonKeys.class
+edu\isi\karma\controller\update\DatabaseTablesListUpdate.class
+edu\isi\karma\controller\update\DatabaseTablePreviewUpdate.class
