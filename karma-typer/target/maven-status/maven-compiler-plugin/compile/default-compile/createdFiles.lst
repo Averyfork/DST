@@ -1,0 +1,9 @@
+edu\isi\karma\semantictypes\tfIdf\Searcher.class
+edu\isi\karma\semantictypes\evaluation\MRRItem.class
+edu\isi\karma\semantictypes\typinghandler\HybridSTModelHandler.class
+edu\isi\karma\semantictypes\tfIdf\Indexer.class
+edu\isi\karma\semantictypes\evaluation\EvaluateMRR.class
+edu\isi\karma\semantictypes\typinghandler\LuceneBasedSTModelHandler.class
+edu\isi\karma\semantictypes\numeric\KSTest.class
+edu\isi\karma\semantictypes\evaluation\EvaluatedJSONLabels.class
+edu\isi\karma\semantictypes\evaluation\ReadEvaluatedFile.class

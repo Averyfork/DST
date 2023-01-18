@@ -1,0 +1,1668 @@
+package edu.isi.karma.research.modeling;
+
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import com.opencsv.CSVWriter;
+import edu.isi.karma.modeling.alignment.*;
+import edu.isi.karma.modeling.alignment.learner.ModelLearningGraph;
+import edu.isi.karma.modeling.alignment.learner.ModelLearningGraphType;
+import edu.isi.karma.modeling.alignment.learner.ModelReader;
+import edu.isi.karma.modeling.alignment.learner.PatternWeightSystem;
+import edu.isi.karma.modeling.ontology.OntologyManager;
+import edu.isi.karma.modeling.research.Params;
+import edu.isi.karma.rep.alignment.*;
+import edu.isi.karma.rep.alignment.SemanticType.Origin;
+import edu.isi.karma.webserver.ContextParametersRegistry;
+import edu.isi.karma.webserver.ServletContextParameterMap;
+import org.jgrapht.graph.DirectedWeightedMultigraph;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.text.DecimalFormat;
+import java.util.*;
+
+public class DynamicUpdate_SemanticModels {
+
+    private static Logger logger = LoggerFactory.getLogger(DynamicUpdate_SemanticModels.class);
+    private OntologyManager ontologyManager = null;
+    private GraphBuilder graphBuilder = null;
+    private NodeIdFactory nodeIdFactory = null;
+    private List<Node> steinerNodes = null;
+    private static double avePre = 0.0;
+    private static double aveRecall = 0.0;
+
+    public DynamicUpdate_SemanticModels(OntologyManager ontologyManager,
+                                        List<Node> steinerNodes) {
+        if (ontologyManager == null ||
+                steinerNodes == null ||
+                steinerNodes.isEmpty()) {
+            logger.error("cannot instanciate model learner!");
+            return;
+        }
+        GraphBuilder gb = ModelLearningGraph.getInstance(ontologyManager, ModelLearningGraphType.Compact).getGraphBuilder();
+        this.ontologyManager = ontologyManager;
+        this.steinerNodes = steinerNodes;
+        this.graphBuilder = cloneGraphBuilder(gb); // create a copy of the graph builder
+        this.nodeIdFactory = this.graphBuilder.getNodeIdFactory();
+    }
+
+    public DynamicUpdate_SemanticModels(GraphBuilder graphBuilder,
+                                        List<Node> steinerNodes) {
+        if (graphBuilder == null ||
+                steinerNodes == null ||
+                steinerNodes.isEmpty()) {
+            logger.error("cannot instanciate model learner!");
+            return;
+        }
+        this.ontologyManager = graphBuilder.getOntologyManager();
+        this.steinerNodes = steinerNodes;
+        this.graphBuilder = cloneGraphBuilder(graphBuilder); // create a copy of the graph builder
+        this.nodeIdFactory = this.graphBuilder.getNodeIdFactory();
+    }
+
+    private GraphBuilder cloneGraphBuilder(GraphBuilder graphBuilder) {
+
+        GraphBuilder clonedGraphBuilder = null;
+        if (graphBuilder == null || graphBuilder.getGraph() == null) {
+            clonedGraphBuilder = new GraphBuilderTopK(this.ontologyManager, false);
+        } else {
+            clonedGraphBuilder = new GraphBuilderTopK(this.ontologyManager, graphBuilder.getGraph());
+        }
+        return clonedGraphBuilder;
+    }
+
+    public void hypothesize(boolean useCorrectTypes, int numberOfCandidates) throws Exception {
+
+//        ModelingConfiguration modelingConfiguration = ModelingConfigurationRegistry.getInstance().getModelingConfiguration(ontologyManager.getContextId());
+//        List<SortableSemanticModel> sortableSemanticModels = new ArrayList<SortableSemanticModel>();
+
+        Map<ColumnNode, ColumnNode> mappingToSourceColumns = new HashMap<ColumnNode, ColumnNode>();
+        List<ColumnNode> columnNodes = new LinkedList<ColumnNode>();
+        for (Node n : steinerNodes)
+            if (n instanceof ColumnNode) {
+                ColumnNode c = (ColumnNode) n;
+                columnNodes.add(c);
+                mappingToSourceColumns.put(c, c);
+            }
+
+        for (Node n : steinerNodes) {
+            if (n instanceof ColumnNode) {
+                ColumnNode steinerNode = (ColumnNode) n;
+                List<SemanticType> candidateSemanticTypes = getCandidateSteinerSets(steinerNode, useCorrectTypes, numberOfCandidates);
+                addSteinerNodeToTheGraph(steinerNode, candidateSemanticTypes);
+            }
+        }
+
+//        logger.info("graph nodes: " + this.graphBuilder.getGraph().vertexSet().size());
+//        logger.info("graph links: " + this.graphBuilder.getGraph().edgeSet().size());
+
+
+		/*logger.info("computing steiner trees ...");
+
+		Set<Node> sn = new HashSet<Node>(steinerNodes);
+		List<DirectedWeightedMultigraph<Node, LabeledLink>> topKSteinerTrees;
+		if (this.graphBuilder instanceof GraphBuilderTopK) {
+			topKSteinerTrees =  ((GraphBuilderTopK)this.graphBuilder).getTopKSteinerTrees(sn,
+					modelingConfiguration.getTopKSteinerTree(),
+					null, null, false);
+		}
+		else
+		{
+			topKSteinerTrees = new LinkedList<DirectedWeightedMultigraph<Node, LabeledLink>>();
+			SteinerTree steinerTree = new SteinerTree(
+					new AsUndirectedGraph<Node, DefaultLink>(this.graphBuilder.getGraph()), Lists.newLinkedList(sn));
+			WeightedMultigraph<Node, DefaultLink> t = steinerTree.getDefaultSteinerTree();
+			TreePostProcess treePostProcess = new TreePostProcess(this.graphBuilder, t);
+			if (treePostProcess.getTree() != null)
+				topKSteinerTrees.add(treePostProcess.getTree());
+		}
+
+//		System.out.println(GraphUtil.labeledGraphToString(treePostProcess.getTree()));
+
+//		logger.info("END ...");
+
+		for (DirectedWeightedMultigraph<Node, LabeledLink> tree: topKSteinerTrees) {
+			if (tree != null) {
+//					System.out.println();
+				SemanticModel sm = new SemanticModel(new RandomGUID().toString(),
+						tree,
+						columnNodes,
+						mappingToSourceColumns
+						);
+				SortableSemanticModel sortableSemanticModel =
+						new SortableSemanticModel(sm, false);
+				sortableSemanticModels.add(sortableSemanticModel);
+
+//					System.out.println(GraphUtil.labeledGraphToString(sm.getGraph()));
+//					System.out.println(sortableSemanticModel.getLinkCoherence().printCoherenceList());
+			}
+		}
+
+		Collections.sort(sortableSemanticModels);
+		int count = Math.min(sortableSemanticModels.size(), modelingConfiguration.getNumCandidateMappings());
+		logger.info("results are ready ...");
+//		sortableSemanticModels.get(0).print();
+		return sortableSemanticModels.subList(0, count);*/
+
+    }
+
+    private List<SemanticType> getCandidateSteinerSets(ColumnNode steinerNode, boolean useCorrectTypes, int numberOfCandidates) {
+
+        if (steinerNode == null)
+            return null;
+
+        List<SemanticType> candidateSemanticTypes = null;
+
+        if (!useCorrectTypes) {
+            candidateSemanticTypes = steinerNode.getTopKLearnedSemanticTypes(numberOfCandidates);
+        } else if (steinerNode.getSemanticTypeStatus() == ColumnSemanticTypeStatus.UserAssigned) {
+            candidateSemanticTypes = steinerNode.getUserSemanticTypes();
+        }
+
+        if (candidateSemanticTypes == null) {
+            logger.error("No candidate semantic type found for the column " + steinerNode.getColumnName());
+            return null;
+        }
+
+        return candidateSemanticTypes;
+    }
+
+
+    private void addSteinerNodeToTheGraph(ColumnNode steinerNode, List<SemanticType> semanticTypes) {
+
+        if (!this.graphBuilder.addNode(steinerNode)) return;
+
+        if (semanticTypes == null) {
+            logger.error("semantic type is null.");
+            return;
+        }
+
+        for (SemanticType semanticType : semanticTypes) {
+
+            if (semanticType == null) {
+                logger.error("semantic type is null.");
+                continue;
+
+            }
+            if (semanticType.getDomain() == null) {
+                logger.error("semantic type does not have any domain");
+                continue;
+            }
+
+            if (semanticType.getType() == null) {
+                logger.error("semantic type does not have any link");
+                continue;
+            }
+
+            String domainUri = semanticType.getDomain().getUri();
+            String propertyUri = semanticType.getType().getUri();
+            Double confidence = semanticType.getConfidenceScore();
+            Origin origin = semanticType.getOrigin();
+
+            logger.debug("semantic type: " + domainUri + "|" + propertyUri + "|" + confidence + "|" + origin);
+
+            Set<Node> nodesWithSameUriOfDomain = this.graphBuilder.getUriToNodesMap().get(domainUri);
+            if (nodesWithSameUriOfDomain == null || nodesWithSameUriOfDomain.isEmpty()) {
+                String nodeId = nodeIdFactory.getNodeId(domainUri);
+                Node source = new InternalNode(nodeId, new Label(domainUri));
+                if (!this.graphBuilder.addNodeAndUpdate(source, null)) continue;
+                String linkId = LinkIdFactory.getLinkId(propertyUri, source.getId(), steinerNode.getId());
+                LabeledLink link = new DataPropertyLink(linkId, new Label(propertyUri));
+                if (!this.graphBuilder.addLink(source, steinerNode, link)) continue;
+                ;
+            } else {
+                for (Node source : nodesWithSameUriOfDomain) {
+                    String linkId = LinkIdFactory.getLinkId(propertyUri, source.getId(), steinerNode.getId());
+                    LabeledLink link = new DataPropertyLink(linkId, new Label(propertyUri));
+                    if (!this.graphBuilder.addLink(source, steinerNode, link)) continue;
+                    ;
+                }
+            }
+
+        }
+    }
+
+    private static double roundDecimals(double d, int k) {
+        String format = "";
+        for (int i = 0; i < k; i++) format += "#";
+        DecimalFormat DForm = new DecimalFormat("#." + format);
+        return Double.valueOf(DForm.format(d));
+    }
+
+    @SuppressWarnings("unused")
+    private static void getStatistics1(List<SemanticModel> semanticModels) {
+        for (int i = 0; i < semanticModels.size(); i++) {
+            SemanticModel source = semanticModels.get(i);
+            int attributeCount = source.getColumnNodes().size();
+            int nodeCount = source.getGraph().vertexSet().size();
+            int linkCount = source.getGraph().edgeSet().size();
+            int datanodeCount = 0;
+            int classNodeCount = 0;
+            for (Node n : source.getGraph().vertexSet()) {
+                if (n instanceof InternalNode) classNodeCount++;
+                if (n instanceof ColumnNode) datanodeCount++;
+            }
+            System.out.println(attributeCount + "\t" + nodeCount + "\t" + linkCount + "\t" + classNodeCount + "\t" + datanodeCount);
+
+            List<ColumnNode> columnNodes = source.getColumnNodes();
+            getStatistics2(columnNodes);
+
+        }
+    }
+
+    private static void getStatistics2(List<ColumnNode> columnNodes) {
+
+        if (columnNodes == null)
+            return;
+
+        int numberOfAttributesWhoseTypeIsFirstCRFType = 0;
+        int numberOfAttributesWhoseTypeIsInCRFTypes = 0;
+        for (ColumnNode cn : columnNodes) {
+            List<SemanticType> userSemanticTypes = cn.getUserSemanticTypes();
+            List<SemanticType> top4Suggestions = cn.getTopKLearnedSemanticTypes(4);
+
+            for (int i = 0; i < top4Suggestions.size(); i++) {
+                SemanticType st = top4Suggestions.get(i);
+                if (userSemanticTypes != null) {
+                    for (SemanticType t : userSemanticTypes) {
+                        if (st.getModelLabelString().equalsIgnoreCase(t.getModelLabelString())) {
+                            if (i == 0) numberOfAttributesWhoseTypeIsFirstCRFType++;
+                            numberOfAttributesWhoseTypeIsInCRFTypes++;
+                            i = top4Suggestions.size();
+                            break;
+                        }
+                    }
+                }
+            }
+
+        }
+
+        System.out.println(numberOfAttributesWhoseTypeIsInCRFTypes + "\t" + numberOfAttributesWhoseTypeIsFirstCRFType);
+//		System.out.println(columnNodes.size() + "\t" + numberOfAttributesWhoseTypeIsInCRFTypes + "\t" + numberOfAttributesWhoseTypeIsFirstCRFType);
+
+//		System.out.println("totalNumberOfAttributes: " + columnNodes.size());
+//		System.out.println("numberOfAttributesWhoseTypeIsInCRFTypes: " + numberOfAttributesWhoseTypeIsInCRFTypes);
+//		System.out.println("numberOfAttributesWhoseTypeIsFirstCRFType:" + numberOfAttributesWhoseTypeIsFirstCRFType);
+    }
+
+    //请求，1代表add，2代表remove
+    private static class Request {
+        private final Multimap<String, Node> request_list;
+
+        Request(Multimap<String, Node> R) {
+            request_list = R;
+        }
+
+        public Multimap<String, Node> getRequest_list() {
+            return this.request_list;
+        }
+    }
+
+    //在G中添加一个与v的uri相同的节点，并复制它的边
+    public static Node cloneNode(Node v, SemanticModel currentModel, DynamicUpdate_SemanticModels modelLearner, DirectedWeightedMultigraph G)
+    {
+        DirectedWeightedMultigraph currentGraph = currentModel.getGraph();
+
+        String nodeId = modelLearner.nodeIdFactory.getNodeId(v.getUri());
+        Node node = new InternalNode(nodeId, new Label(v.getUri()));
+        G.addVertex(node);
+
+        HashSet<LabeledLink> templ= new HashSet<>();
+        Map<LabeledLink, Node> mp1 = new HashMap<>();
+        Map<LabeledLink, Node> mp2 = new HashMap<>();
+        ObjectPropertyType objectPropertyType=null;
+
+        Set<DefaultLink> e = G.incomingEdgesOf(v);
+        for (DefaultLink dl : e) {
+            String linkId = LinkIdFactory.getLinkId(dl.getUri(),  dl.getSource().getId(),node.getId());
+            if(dl.getType() == LinkType.ObjectPropertyLink) {
+                ObjectPropertyLink ol = (ObjectPropertyLink) dl;
+                if (objectPropertyType==null) objectPropertyType = ol.getObjectPropertyType();
+                LabeledLink link = new ObjectPropertyLink(linkId, new Label(ol.getUri()), ol.getObjectPropertyType());
+                //G.addEdge(ol.getSource(),node, link);
+                templ.add(link);
+                mp1.put(link, ol.getSource());
+                mp2.put(link, node);
+            }
+            else
+            {
+                LabeledLink l=(LabeledLink)dl;
+                LabeledLink link = new ObjectPropertyLink(linkId, new Label(l.getUri()),objectPropertyType);
+                //G.addEdge(node,l.getTarget(), link);
+                templ.add(link);
+                mp1.put(link,l.getSource());
+                mp2.put(link,node);
+            }
+        }
+        Set<DefaultLink> f = G.outgoingEdgesOf(v);
+        for (DefaultLink dl : f) {
+            String linkId = LinkIdFactory.getLinkId(dl.getUri(),  node.getId(),dl.getTarget().getId());
+            if(dl.getType() == LinkType.ObjectPropertyLink)
+            {
+                ObjectPropertyLink ol=(ObjectPropertyLink) dl;
+                LabeledLink link = new ObjectPropertyLink(linkId, new Label(ol.getUri()),ol.getObjectPropertyType());
+                //G.addEdge(node,ol.getTarget(), link);
+                templ.add(link);
+                mp1.put(link,node);
+                mp2.put(link,ol.getTarget());
+
+            }
+            else
+            {
+                LabeledLink l=(LabeledLink)dl;
+                LabeledLink link = new DataPropertyLink(linkId, new Label(l.getUri()));
+                //G.addEdge(node,l.getTarget(), link);
+                templ.add(link);
+                mp1.put(link,node);
+                mp2.put(link,l.getTarget());
+            }
+        }
+
+        for (DefaultLink dl : f) {
+            if(dl.getSource().getUri().equals(node.getUri()) && dl.getTarget().getUri().equals(node.getUri()))
+            {
+                String linkId = LinkIdFactory.getLinkId(dl.getUri(), v.getId(), node.getId());
+                if (dl.getType() == LinkType.ObjectPropertyLink) {
+                    ObjectPropertyLink ol = (ObjectPropertyLink) dl;
+                    LabeledLink link = new ObjectPropertyLink(linkId, new Label(ol.getUri()), ol.getObjectPropertyType());
+                    G.addEdge(v,node,link);
+                }
+                else
+                {
+                    LabeledLink link = new ObjectPropertyLink(linkId, new Label(dl.getUri()), objectPropertyType);
+                    G.addEdge(v,node,link);
+                }
+                break;
+            }
+        }
+        for(LabeledLink l:templ)
+        {
+            G.addEdge(mp1.get(l),mp2.get(l),l);
+        }
+
+
+        return node;
+    }
+    public static Node find_edge_without_label(Node inode,Node v,LabeledLink l,SemanticModel currentModel, DirectedWeightedMultigraph G)
+    {
+        DirectedWeightedMultigraph currentGraph = currentModel.getGraph();
+        for(Object n:currentGraph.vertexSet())
+        {
+            Node nn=(Node) n;
+            if( nn.getId() != inode.getId() && nn.getUri().equals(inode.getUri()) && nn.getId() != v.getId())
+            {
+                int flag=0;
+                for (Object l0 : currentGraph.edgesOf(nn)) {
+                    if (((LabeledLink)l0).getUri() == l.getUri()) {
+                        flag=1;
+                        break;
+                    }
+                }
+                if(flag==0)  return nn;
+            }
+        }
+        return null;
+    }
+    //查询两点间全部路径
+    public static HashSet<LabeledLink> findAllEdges(Node n1, Node n2, DirectedWeightedMultigraph G) {
+        //初始化
+        HashSet<LabeledLink> alledges = new HashSet<>();
+
+        Map<Node, Integer> vis1 = new HashMap<>();
+        Map<Node, Integer> vis2 = new HashMap<>();
+        Map<LabeledLink, Integer> mark1 = new HashMap<>();
+        Map<LabeledLink, Integer> mark2 = new HashMap<>();
+
+        Stack<Node> mainStack = new Stack<>();
+        //n1入栈
+        mainStack.push(n1);
+        vis1.put(n1, 1);
+        while (!mainStack.empty())   //第一次dfs
+        {
+            Node tpnode = mainStack.pop();
+            vis1.put(tpnode, 1);
+            Set<LabeledLink> nodeSet = G.edgesOf(tpnode);
+            for (LabeledLink l : nodeSet) {
+                if (!vis1.containsKey(l.getTarget()))  //如果没有遍历过这个点
+                {
+                    vis1.put(l.getTarget(), 1);        //标记并入栈
+                    mainStack.push(l.getTarget());
+                    if (!mark1.containsKey(l))   //标记一下正向经过了这条边
+                    {
+                        mark1.put(l, 1);
+                    }
+                }
+                if (!vis1.containsKey(l.getSource())) {
+                    vis1.put(l.getSource(), 1);
+                    mainStack.push(l.getSource());
+                    if (!mark1.containsKey(l))   //标记一下逆向经过了这条边
+                    {
+                        mark1.put(l, 0);
+                    }
+                }
+            }
+        }
+        mainStack.push(n2);
+        vis2.put(n2, 1);
+        while (!mainStack.empty())   //第二次dfs
+        {
+            Node tpnode = mainStack.pop();
+            vis2.put(tpnode, 1);
+            Set<LabeledLink> nodeSet = G.edgesOf(tpnode);
+            for (LabeledLink l : nodeSet) {
+                if (!vis2.containsKey(l.getSource()))  //如果没有遍历过这个点则遍历Source
+                {
+                    vis2.put(l.getSource(), 1);        //标记并入栈
+                    mainStack.push(l.getSource());
+                    if (mark1.containsKey(l) && !mark2.containsKey(l) && mark1.get(l) == 1)   //如果第一次遍历经过了这条边,且这次沿相反方向经过这条边则加入结果中
+                    {
+                        alledges.add(l);
+                        mark2.put(l, 0);
+                    }
+                }
+                if (!vis2.containsKey(l.getTarget()))  //如果没有遍历过这个点则遍历Source
+                {
+                    vis2.put(l.getTarget(), 1);        //标记并入栈
+                    mainStack.push(l.getTarget());
+                    if (mark1.containsKey(l) && !mark2.containsKey(l) && mark1.get(l) == 0)   //如果第一次遍历经过了这条边,且这次沿相反方向经过这条边则加入结果中
+                    {
+                        alledges.add(l);
+                        mark2.put(l, 1);
+                    }
+                }
+            }
+        }
+
+
+        return alledges;
+
+    }
+
+    public static void modelCleaning(SemanticModel currentModel, DirectedWeightedMultigraph G) throws Exception {
+        //用于在更新结束后，对语义模型进行cleaning
+        List<InternalNode> ins = new ArrayList(currentModel.getInternalNodes());
+        DirectedWeightedMultigraph currentGraph = currentModel.getGraph();
+        List<Node> cns = new ArrayList<Node>(currentGraph.vertexSet());
+        List<Node> nsFromG = new ArrayList<Node>(G.vertexSet());
+        Queue<InternalNode> clean1Node = new PriorityQueue<>((n1,n2) -> {
+            int s1 = currentModel.getGraph().incomingEdgesOf(n1).size();
+            int s2 = currentModel.getGraph().incomingEdgesOf(n2).size();
+            return s1-s2;
+        });
+        Queue<InternalNode> clean2Node = new PriorityQueue<>((n1,n2) -> {
+            int s1 = currentModel.getGraph().outgoingEdgesOf(n1).size();
+            int s2 = currentModel.getGraph().outgoingEdgesOf(n2).size();
+            return s1-s2;
+        });
+        for(InternalNode in : ins){
+            clean1Node.add(in);
+            clean2Node.add(in);
+        }
+        //clean1：检查是否存在某些类节点，没有入边且只有一个类型为objectlink的出边，则删除
+        for (InternalNode cur : clean1Node) {
+            List<LabeledLink> curLink = new ArrayList(currentModel.getGraph().outgoingEdgesOf(cur));
+            if(currentModel.getGraph().incomingEdgesOf(cur).size() == 0 && curLink.size() == 1) {
+                if (curLink.get(0).getType() == LinkType.ObjectPropertyLink) {
+                    currentModel.getGraph().removeVertex(cur);
+                    clean2Node.remove(cur);
+                }
+                else{
+                    continue;
+                }
+            }
+        }
+        //clean2:判断是否存在类节点没有出边，有则将其删除
+        for (InternalNode cur : clean2Node) {
+            List<LabeledLink> curLink = new ArrayList(currentModel.getGraph().outgoingEdgesOf(cur));
+            if(curLink.size() == 0) {
+                currentModel.getGraph().removeVertex(cur);
+            }
+
+        }
+
+//        //clean1：检查是否存在某些类节点，没有入边且只有一个类型为objectlink的出边，则删除
+//        Set<InternalNode> deleteSet = new HashSet<InternalNode>();
+//        for (InternalNode cur : ins) {
+//            List<LabeledLink> curLink = new ArrayList(currentModel.getGraph().outgoingEdgesOf(cur));
+//            if(currentModel.getGraph().incomingEdgesOf(cur).size() == 0 && curLink.size() == 1) {
+//                if (curLink.get(0).getType() == LinkType.ObjectPropertyLink) {
+//                    LabeledLink mark = null;
+//                    for (LabeledLink l : currentModel.getGraph().edgesOf(cur)) {
+//                        mark = l;
+//                    }
+//                    deleteSet.add(cur);
+//                    currentModel.getGraph().removeEdge(mark);
+//                }
+//                else{
+//                    continue;
+//                }
+//            }
+//        }
+//        for (InternalNode cur : deleteSet) {
+//            currentModel.getGraph().removeVertex(cur);
+//        }
+        //一下已经废弃
+        //check2：检查是否存在两个悬浮节点，其在G中有共同祖先，有则添加一个共同祖先，使语义模型结构更合理
+//        HashMap<Node, Integer> possibleNodes = new HashMap<>();
+//        HashMap<Node, LabeledLink> possiblePreNode = new HashMap<>();
+//        for (Node n : ins)  {
+//            //首先判断是否存在，两个及两个以上类节点在currentGraph中没有父节点，但是G中存在，那就找到一个最可能父节点，加入currentModel中
+//            if (currentGraph.incomingEdgesOf(n).isEmpty()) {
+//                List<LabeledLink> linkesFormG = new ArrayList<>(G.incomingEdgesOf(n));
+//                if (!linkesFormG.isEmpty()) {
+//                    Collections.sort(linkesFormG, new Comparator() {
+//                        //对边集合进行排序，依据边的权值
+//                        @Override
+//                        public int compare(Object o1, Object o2) {
+//                            LabeledLink l1 = (LabeledLink) o1;
+//                            LabeledLink l2 = (LabeledLink) o2;
+//                            if (l1.getWeight() != l2.getWeight()) {
+//                                //权值从小到大，相等时的顺序暂不考虑（可以根据出现频率）
+//                                return l1.getWeight() > l2.getWeight() ? 1 : -1;
+//                            } else {
+//                                return 0;
+//                            }
+//                        }
+//                    });
+//                    Node onePossibleNode = linkesFormG.get(0).getSource();
+//                    if (!currentGraph.containsVertex(onePossibleNode)) {
+//                        if (possibleNodes.containsKey(onePossibleNode)) {
+//                            possibleNodes.put(onePossibleNode, possibleNodes.get(onePossibleNode) + 1);
+//                            if (possibleNodes.get(onePossibleNode) == 1) {
+//                                //第一次等于1，有两个悬浮类节点在G中有共同祖先，即onepossiblenode，此时将该点加入模型
+//                                currentGraph.addVertex(onePossibleNode);
+//                                currentGraph.addEdge(onePossibleNode, n, linkesFormG.get(0));
+//                                currentGraph.addEdge(onePossibleNode, possiblePreNode.get(onePossibleNode).getTarget(), possiblePreNode.get(onePossibleNode));
+//                            } else if (possibleNodes.get(onePossibleNode) > 1) {
+//                                currentGraph.addEdge(onePossibleNode, n);
+//                            }
+//                        } else {
+//                            possibleNodes.put(onePossibleNode, 0);
+//                            possiblePreNode.put(onePossibleNode, linkesFormG.get(0));
+//                        }
+//                    }
+//                }
+//            }
+//        }
+        //check3：检查是否存在某个类节点标号错误的情况，即语义模型中只有一个同名类节点，但是标号为大于等于2
+//        HashMap<String , List<InternalNode> > uriNode = new HashMap<>();
+//        for(InternalNode In : ins){
+//            String s = In.getUri();
+//            if(uriNode.get(s) != null)
+//                uriNode.get(s).add(In);
+//            else{
+//                List<InternalNode> ns = new ArrayList<InternalNode>();
+//                ns.add(In);
+//                uriNode.put(s,ns);
+//            }
+//        }
+//        for(List<InternalNode> uriSameNode: uriNode.values()){
+//            int maxNum = uriSameNode.size();
+//            if(maxNum == 1){
+//                InternalNode onlyn = uriSameNode.get(0);
+//                String nuri = onlyn.getUri();
+//                char num = onlyn.getId().charAt(onlyn.getId().length()-1);
+//                if(Character.isDigit(num)){
+//                    if((num != '1') ) {
+//
+//
+//                        for(Node nn : nsFromG){
+//                            if(nn instanceof InternalNode){
+//                                InternalNode Inn = (InternalNode)nn;
+//                                if(Inn.getUri().equals(nuri) && Inn.getId().endsWith("1")){
+////                                    currentGraph.addVertex(nn);
+////                                    Set<LabeledLink> sll = currentModel.getGraph().incomingEdgesOf(onlyn);
+////                                    List<Node> sn = new ArrayList<Node>();
+////                                    for(LabeledLink l : sll){
+////                                        sn.add(l.getSource());
+////                                    }
+////                                    Set<LabeledLink> tll = currentModel.getGraph().outgoingEdgesOf(onlyn);
+////                                    List<Node> tn = new ArrayList<Node>();
+////                                    for(LabeledLink l : sll){
+////                                        tn.add(l.getTarget());
+////                                    }
+////                                    currentGraph.removeVertex(onlyn);
+////                                    Node source = null;
+////                                    for(Node l : sn) {
+////                                        String id = l.getId();
+////                                        for(Node n : cns){
+////                                            if(n.getId().equals(id)){
+////                                                source = n;
+////                                            }
+////                                        }
+////                                        currentGraph.addEdge(source,nn);
+////                                    }
+////                                    Node target = null;
+////                                    for(Node l : tn) {
+////                                        String id = l.getId();
+////                                        for(Node n : cns){
+////                                            if(n.getId().equals(id)){
+////                                                target = n;
+////                                            }
+////                                        }
+////                                        currentGraph.addEdge(nn,target);
+////                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//                continue;
+//            }
+//        }
+
+    }
+    //    public static Node find_edge_without_label(Node inode,Node v,LabeledLink l,SemanticModel currentModel, DirectedWeightedMultigraph G)
+//    {
+//        DirectedWeightedMultigraph currentGraph = currentModel.getGraph();
+//        for(Object n:currentGraph.vertexSet())
+//        {
+//            Node nn=(Node) n;
+//            if( nn.getId() != inode.getId() && nn.getUri().equals(inode.getUri()) && nn.getId() != v.getId())
+//            {
+//                for (Object l0 : currentGraph.edgesOf(nn)) {
+//                    if (((LabeledLink)l0).getUri() == l.getUri()) {
+//                        break;
+//                    }
+//                }
+//                return nn;
+//            }
+//        }
+//        return null;
+//    }
+    //判断边是否允许重复（两种情况：1.datalink(如edm中两个不同属性有相同的边provenance连到同一个类节点) 2. objectlink(如offer和place)）
+    //可以看到sourcenode一定是类节点
+    public static boolean judgeRepeatable(String sourceUri, String linkUri, final List<SemanticModel> trainingData){
+        boolean isAllowReapet = false;
+        int times;
+        int reapetTimes = 0;
+        int haveMultiLinksSM = 0;
+        for(SemanticModel sm : trainingData) {
+            times = 0;
+            List<InternalNode> sourceNodes = new ArrayList<>();
+            DirectedWeightedMultigraph G = sm.getGraph();
+            for (Object o : sm.getInternalNodes()) {
+                InternalNode n = (InternalNode) o;
+                if (n.getUri().equals(sourceUri)) {
+                    sourceNodes.add(n);
+                }
+            }
+            if(sourceNodes.size() >= 2){
+                haveMultiLinksSM++;
+                for (InternalNode n : sourceNodes) {
+                    times = 0;
+                    for (Object oo : G.outgoingEdgesOf(n)) {
+                        LabeledLink ll = (LabeledLink) oo;
+                        if (ll.getUri().equals(linkUri)) {
+                            times++;
+                        }
+                    }
+                    if (times > 1) {
+                        reapetTimes++;
+                    }
+                }
+            }
+        }
+        if(2*reapetTimes > haveMultiLinksSM){
+            isAllowReapet = true;
+        }
+        return isAllowReapet;
+    }
+
+
+    //添加
+    public static <labeledlink> void update_add(Node u, SemanticModel currentModel, DirectedWeightedMultigraph G, final List<SemanticModel> trainingData,DynamicUpdate_SemanticModels modelLearner
+    ,Map<String ,String> extratSemanticTypes) throws Exception {
+        HashSet<LabeledLink> temp_U = new HashSet<>();
+        List<InternalNode> currentInternalNodes = new ArrayList<>(currentModel.getInternalNodes());
+        DirectedWeightedMultigraph currentGraph = currentModel.getGraph();
+        //找到要添加的属性节点所关联的类节点
+        String targetAttributeId = ((ColumnNode)u).getId();
+        Node v = null;
+        LabeledLink ll = null;
+        //使用正确type或者k=1时
+//        List<LabeledLink> eu = new ArrayList<>(G.incomingEdgesOf(u));
+//        if(eu.size()==0){
+//            return;
+//        }
+
+        //k=4时
+        List<LabeledLink> teu = new ArrayList<>(G.incomingEdgesOf(u));
+        List<LabeledLink> eu = new ArrayList<>();
+        //需要的类节点的uri，注意uri不含标号，Id含有标号
+        if(teu.isEmpty()){
+            return;
+        }
+        //如果考虑多个语义类型，此时依靠上一个getsemantictype函数的结果，对eu进行筛选，只保留一个选出来的semantictype
+        String chosenClassNodeUri = extratSemanticTypes.get(targetAttributeId);
+        for(LabeledLink l : teu){
+            if((l.getSource().getUri()+l.getUri()).equals(chosenClassNodeUri)){
+                eu.add(l);
+            }
+        }
+        String linkedInternalNodeUri = eu.get(0).getSource().getUri();
+        String linkUri = eu.get(0).getUri();
+        //判断是否允许重复
+        boolean isAllowRepeat = judgeRepeatable(linkedInternalNodeUri,linkUri,trainingData);
+        if (eu.size() == 1) {
+            //当G中只有一个边时，较为简单，单独判断
+            ll = eu.get(0);
+            v = ll.getSource();
+            if(!isAllowRepeat) {
+                //如果不允许重复，且currentmodel中该类节点已经有重边，则构造新类节点加入
+                if (currentGraph.containsVertex(v)) {
+                    for (Object l : currentGraph.edgesOf(v)) {
+                        LabeledLink tl = (LabeledLink) l;
+                        if (tl.getUri() == ll.getUri()) {
+                            int mark = 0;
+                            for (Object n : G.vertexSet()) {
+                                Node nn = (Node) n;
+                                if (nn.getId() != v.getId() && nn.getUri().equals(v.getUri())) {
+                                    //System.out.println(nn.getId());
+                                    int flag = 0;
+                                    if (currentGraph.containsVertex(nn)) {
+                                        for (Object l0 : currentGraph.edgesOf(nn)) {
+                                            if (((LabeledLink) l0).getUri() == ll.getUri()) {
+                                                flag = 1;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (flag == 0) {
+                                        mark = 1;
+                                        v = nn;
+                                        String linkId = LinkIdFactory.getLinkId(ll.getUri(), v.getId(), u.getId());
+                                        LabeledLink link = new DataPropertyLink(linkId, new Label(ll.getUri()));
+                                        G.addEdge(v, u, link);
+                                        ll = link;
+                                        break;
+                                    }
+                                }
+                                if (mark == 1) break;
+                            }
+                            if (mark == 0) {
+                                v = cloneNode(v, currentModel, modelLearner, G);
+                                String linkId = LinkIdFactory.getLinkId(ll.getUri(), v.getId(), u.getId());
+                                LabeledLink link = new DataPropertyLink(linkId, new Label(ll.getUri()));
+                                G.addEdge(v, u, link);
+                                ll = link;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else if(eu.size() >1 ){
+            //eu中边数大于1，则有两个或两个以上类节点可选
+            final String targetNodeName = ((ColumnNode) u).getColumnName().toLowerCase();
+            Collections.sort(eu, new Comparator() {
+                //对边集合进行排序，优先根据点的modelid数量从大到小，其次根据标号从小到大
+                @Override
+                public int compare(Object o1, Object o2) {
+                    //
+                    String s1 = ((LabeledLink) o1).getSource().getId();
+                    String s2 = ((LabeledLink) o2).getSource().getId();
+                    int coherence1 = 0;
+                    int coherence2 = 0;
+//                    for (SemanticModel sm : trainingData) {
+//                        ColumnNode cn = null;
+//                        for (ColumnNode n : sm.getColumnNodes()) {
+//                            if (n.getColumnName().toLowerCase().contains(targetNodeName)) {
+//                                cn = n;
+//                                break;
+//                            }
+//                        }
+//                        if (cn != null) {
+//                            for (LabeledLink l : sm.getGraph().edgesOf(cn)) {
+//                                if (l.getSource().getId().equals(s1)) {
+//                                    coherence1++;
+//                                } else if (l.getSource().getId().equals(s2)) {
+//                                    coherence2++;
+//                                }
+//                            }
+//                        }
+//                    }
+                    if(coherence1 ==0 && coherence2 == 0){
+                        coherence1 = ((LabeledLink) o1).getSource().getModelIds().size();
+                        coherence2 = ((LabeledLink) o2).getSource().getModelIds().size();
+                    }
+                    if(coherence1 ==0 && coherence2 == 0){
+                        //前面modelid从大到小，但是判断不出来的时候，直接看标号则是从小到大，因此我们取负数
+                        coherence1 = (int)(((LabeledLink) o1).getSource().getId().charAt(((LabeledLink) o1).getSource().getId().length()-1)) - (int)('0');
+                        coherence2 = (int)(((LabeledLink) o2).getSource().getId().charAt(((LabeledLink) o2).getSource().getId().length()-1)) - (int)('0');
+                        coherence1 *= (-1);
+                        coherence2 *= (-1);
+                    }
+                    if (coherence1 != coherence2) {
+                        return coherence1 < coherence2 ? 1 : -1;
+                    } else {
+                        return 0;
+                    }
+                }
+            });
+            if (!eu.isEmpty()) {
+                boolean isInternalNodeEnough = false;//用于记录类节点是否足够，不足需要构造新类节点
+                //第一步，先不考虑是否允许重复边，检查所有可选类节点，如果有可用即可，没有则进一步根据是否允许重复判断，再没有则构造新类节点
+                for (LabeledLink l : eu) {
+                    boolean isHaveLink = false;
+                    String s = l.getUri();
+                    String NodeId = l.getSource().getId();
+                    Node sourceNode = null;
+                    for (Node n : currentInternalNodes) {
+                        //先找到G中某个类节点在现有语义模型中的对应点，有就继续判断是否存在边，没有则直接添加
+                        if (n.getId().equals(NodeId)) {
+                            sourceNode = n;
+                            break;
+                        }
+                    }
+                    if (sourceNode != null) {
+                        for (LabeledLink currentNodeLink : currentModel.getGraph().outgoingEdgesOf(sourceNode)) {
+                            //判断是否已经存在同类的边(第一步判断)，此处判断依据是边的Uri
+                            if (currentNodeLink instanceof DataPropertyLink) {
+                                String ss = currentNodeLink.getUri();
+                                if (ss.equals(s)) {
+                                    isHaveLink = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (isHaveLink) {
+                            //如果有，直接判断下一个
+                            continue;
+                        } else {
+                            //如果没有，则类节点就是该类节点（因为前面已经通过coherence排序过）
+                            isInternalNodeEnough = true;
+                            ll = l;
+                            v = l.getSource();
+                            break;
+                        }
+                    } else {
+                        isInternalNodeEnough = true;
+                        ll = l;
+                        v = l.getSource();
+                        break;
+                    }
+                }
+                if(!isInternalNodeEnough && isAllowRepeat){
+                    //只依靠边的uri来区分没有找到可用类节点，且允许重复，则根据 边uri+属性点name 再次进行判断
+                    for (LabeledLink l : eu) {
+                        boolean isHaveLink = false;
+                        String s = l.getUri()+((ColumnNode)u).getColumnName();
+                        String NodeId = l.getSource().getId();
+                        Node sourceNode = null;
+                        for (Node n : currentInternalNodes) {
+                            //先找到G中某个类节点在现有语义模型中的对应点，有就继续判断是否存在边，没有则直接添加
+                            if (n.getId().equals(NodeId)) {
+                                sourceNode = n;
+                                break;
+                            }
+                        }
+                        if (sourceNode != null) {
+                            for (LabeledLink currentNodeLink : currentModel.getGraph().outgoingEdgesOf(sourceNode)) {
+                                //判断是否已经存在同类的边(第一步判断)，此处判断依据是边的label+name
+                                if (currentNodeLink instanceof DataPropertyLink) {
+                                    String ss = currentNodeLink.getUri()+((ColumnNode)currentNodeLink.getTarget()).getColumnName();
+                                    if (ss.equals(s)) {
+                                        isHaveLink = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (isHaveLink) {
+                                //如果有，直接判断下一个
+                                continue;
+                            }
+                            else{
+                                //如果没有，则类节点就是该类节点（因为前面已经通过coherence排序过）
+                                isInternalNodeEnough = true;
+                                ll = l;
+                                v = l.getSource();
+                                break;
+                            }
+                        }else {
+                            isInternalNodeEnough = true;
+                            ll = l;
+                            v = l.getSource();
+                            break;
+                        }
+                    }
+                }
+                if (!isInternalNodeEnough) {
+                    //到此，如果还是未找到相连的类节点，则先看currentModel中是否有手动构造的类节点可用（基于不修改G的想法），没有则构造一个新节点
+                    List<String> sameIdFromG = new ArrayList<>();
+                    for(LabeledLink eull : eu){
+                        sameIdFromG.add(eull.getSource().getId());
+                    }
+                    for(InternalNode in : currentInternalNodes){
+                        if(in.getUri().equals(linkedInternalNodeUri)) {
+                            if(!sameIdFromG.contains(in.getId())){
+                                //说明有手动添加的类节点，进一步判断其是否有相同label的边，没有则可用，有则继续循环
+                                boolean isavailable = true;
+                                for(Object ino : currentGraph.outgoingEdgesOf(in)){
+                                    LabeledLink inll  = (LabeledLink) ino;
+                                    if(inll.getUri().equals(linkUri)){
+                                        isavailable = false;
+                                        break;
+                                    }
+                                }
+                                if(isavailable){
+                                    //说明这个手动添加的类节点可用，构造一条新边使之加入到currentModel中
+                                    isInternalNodeEnough = true;
+                                    v = in;
+                                    String linkId = LinkIdFactory.getLinkId(linkUri, v.getId(),u.getId());
+                                    ll = new DataPropertyLink(linkId, new Label(linkUri));
+                                }
+                            }
+                        }
+                    }
+                    //循环结束，如果仍没有可用类节点，则手动添加一个
+                    if(!isInternalNodeEnough) {
+                        v = cloneNode(eu.get(0).getSource(), currentModel, modelLearner, G);
+                        String linkId = LinkIdFactory.getLinkId(linkUri, v.getId(), u.getId());
+                        LabeledLink link = new DataPropertyLink(linkId, new Label(linkUri));
+                        G.addEdge(v, u, link);
+                        ll = link;
+                    }
+                }
+            }
+        }
+        if (!currentGraph.containsVertex(v)) //如果所关联的类节点不存在则先添加这个类节点
+        {
+            //System.out.println("---");
+            //System.out.println(v.getId());
+
+            currentGraph.addVertex(v);
+            //将所有语义模型中涉及到目标点的边加入到集合中
+            Set<DefaultLink> e = G.edgesOf(v);
+            for (DefaultLink l : e) {
+                /*System.out.println(l.getSource().getId());
+                System.out.println(l.getTarget().getId());
+                System.out.println(((LabeledLink)l).getLabel());
+                System.out.println("*");*/
+                if ((currentGraph.containsVertex(l.getSource()) && currentGraph.containsVertex(l.getTarget())) && l.getType() == LinkType.ObjectPropertyLink) {
+                    temp_U.add((LabeledLink) l);
+                }
+            }
+            if (temp_U.isEmpty()) {                                       //currentmodel没有与v直接相连的边，则添加1条v到currentmodel的最短路
+                currentGraph.removeVertex(v);
+                HashMap<Node, Integer> vis = new HashMap<Node, Integer>();
+                HashMap<Node, Double> dis = new HashMap<Node, Double>();
+                HashMap<Node, LabeledLink> prelink = new HashMap<Node, LabeledLink>();
+                HashMap<Node, Node> prenode = new HashMap<Node, Node>();
+                class Edge implements Comparable<Edge> {
+                    int w;
+                    Node to;
+
+                    Edge() {
+                        to = null;
+                        w = 0;
+                    }
+
+                    Edge(Node m_to, int m_w) {
+                        to = m_to;
+                        w = m_w;
+                    }
+
+                    public int compareTo(Edge obj) {
+                        return this.w - obj.w;
+                    }
+                }
+
+                Queue<Edge> pq = new PriorityQueue<>();
+                pq.add(new Edge(v, 0));
+                dis.put(v, (double) 0);
+                while (!pq.isEmpty()) {
+                    Node to = pq.peek().to;
+                    int d = pq.peek().w;
+                    pq.poll();
+                    if (vis.containsKey(to)) continue;
+                    vis.put(to, 1);
+                    if (currentModel.getGraph().vertexSet().contains(to))     //第一个被计算出最短路的currentmodel中的节点，就是currentmodel中距离v最近的节点
+                    {
+                        Node inode=to;
+                        LabeledLink minEdge = prelink.get(to);
+                        boolean has_same_label=false;                            //判断一下to是否已有相同label
+                        for (Object l : currentGraph.edgesOf(inode)) {
+                            if (((LabeledLink)l).getUri().equals(minEdge.getUri())) {
+                                has_same_label=true;
+                                break;
+                            }
+                        }
+                        if(has_same_label){               //有相同label尝试找一个uri相同但不含相同label的节点
+                            Node tempn=find_edge_without_label(inode,prenode.get(to),minEdge,currentModel,G);
+                            if (tempn!=null)                      //找到了一个不含label且uri相同的类节点，将inode改为该节点
+                            {
+                                inode=tempn;
+                                String linkId = LinkIdFactory.getLinkId(minEdge.getUri(), inode.getId(), prenode.get(to).getId());
+                                LabeledLink link = new DataPropertyLink(linkId, new Label(minEdge.getUri()));
+                                G.addEdge(inode, prenode.get(to), link);
+                                //currentGraph.addEdge(inode, prenode.get(to), link);
+                                prelink.put(inode,link);
+                                prenode.put(inode,prenode.get(to));
+                            }
+                        }
+                        to=inode;
+
+                        while (to != v)                                         //添加一条to到v的最短路
+                        {
+                            currentGraph.addVertex(prenode.get(to));
+                            currentGraph.addEdge(prelink.get(to).getSource(), prelink.get(to).getTarget(), prelink.get(to));
+                            to = prenode.get(to);
+                        }
+                        break;
+                    }
+                    for (Object l : G.edgesOf(to)) {
+                        LabeledLink tl = (LabeledLink) l;
+                        if (!vis.containsKey(tl.getTarget()) && (!dis.containsKey(tl.getTarget()) || dis.get(tl.getTarget()) > d + tl.getWeight() + 10000) && !G.outgoingEdgesOf(tl.getTarget()).isEmpty()) {
+                            dis.put(tl.getTarget(), d + tl.getWeight() + 10000);
+                            pq.add(new Edge(tl.getTarget(), (int) (d + tl.getWeight() + 10000)));
+                            prenode.put(tl.getTarget(), to);
+                            prelink.put(tl.getTarget(), tl);
+                        }
+                        if (!vis.containsKey(tl.getSource()) && (!dis.containsKey(tl.getSource()) || dis.get(tl.getSource()) > d + tl.getWeight() + 10000) && !G.outgoingEdgesOf(tl.getSource()).isEmpty()) {
+                            dis.put(tl.getSource(), d + tl.getWeight() + 10000);
+                            pq.add(new Edge(tl.getSource(), (int) (d + tl.getWeight() + 10000)));
+                            prenode.put(tl.getSource(), to);
+                            prelink.put(tl.getSource(), tl);
+                        }
+                    }
+                }
+                pq.clear();
+                if (!currentGraph.containsVertex(v)) currentGraph.addVertex(v);            //如果v被添加前整张图是空的，那么就需要这一步
+            }
+            if (!temp_U.isEmpty()) {
+                //System.out.println("yes");
+                List<LabeledLink> U = new ArrayList<LabeledLink>(temp_U);//集合转换为序列以进行排序
+                Collections.sort(U, new Comparator() {
+                    //对边集合进行排序，依据边的权值
+                    @Override
+                    public int compare(Object o1, Object o2) {
+                        int coherence1 = 0;
+                        int coherence2 = 0;
+                        coherence1 = ((LabeledLink) o1).getSource().getModelIds().size();
+                        coherence2 = ((LabeledLink) o2).getSource().getModelIds().size();
+                        if(coherence1 == coherence2){
+                            coherence1 = (int)(((LabeledLink) o1).getSource().getId().charAt(((LabeledLink) o1).getSource().getId().length()-1)) - (int)('0');
+                            coherence2 = (int)(((LabeledLink) o2).getSource().getId().charAt(((LabeledLink) o2).getSource().getId().length()-1)) - (int)('0');
+                            coherence1 *= (-1);
+                            coherence2 *= (-1);
+                        }
+                        if (coherence1 != coherence2) {
+                            return coherence1 < coherence2 ? 1 : -1;
+                        } else {
+                            return 0;
+                        }
+                    }
+                });
+                //首先挑选权值最短的边
+                int chosenIn = 0;
+                Node inode= null;
+                LabeledLink minEdge = U.get(chosenIn);
+                boolean isfind = false;
+                for(;chosenIn < U.size();chosenIn++){
+                    minEdge = U.get(chosenIn);
+                    boolean has_same_label=false;                            //判断一下是否有相同label
+                    if(v==minEdge.getSource()) inode=minEdge.getTarget();
+                    else  inode=minEdge.getSource();
+                    for (Object l : currentGraph.edgesOf(inode)) {
+                        if (((LabeledLink)l).getUri().equals(U.get(chosenIn).getUri())) {
+                            has_same_label=true;
+                            break;
+                        }
+                    }
+                    if(!has_same_label){
+                        currentGraph.addEdge(minEdge.getSource(), minEdge.getTarget(), minEdge);
+                        isfind = true;
+                        break;//没有相同label直接用这个节点
+                    }
+                    else                             //有相同label就找一下其他uri相同的节点是否有不含这个label的
+                    {
+//                        chosenIn ++;
+//                        Node tempn=U.get(chosenIn);
+//                        if (tempn!=null)                      //找到了一个不含label且uri相同的类节点，将inode改为该节点
+//                        {
+//                            inode=tempn;
+//                            String linkId = LinkIdFactory.getLinkId(U.get(0).getUri(), inode.getId(), v.getId());
+//                            LabeledLink link = new DataPropertyLink(linkId, new Label(U.get(0).getUri()));
+//                            G.addEdge(inode, v, link);
+//                            currentGraph.addEdge(inode, v, link);
+//                            minEdge = link;
+//                        }
+//                        else currentGraph.addEdge(minEdge.getSource(), minEdge.getTarget(), minEdge); //找不到其他的只能用这个节点
+                        continue;
+                    }
+                }
+                if(!isfind) {
+                    currentGraph.addEdge(U.get(0).getSource(), U.get(0).getTarget(), U.get(0));
+                }
+                //System.out.println(inode.getId());
+                //判断其他所有边
+                for (int i = chosenIn; i < U.size(); i++) {
+                    minEdge = U.get(i);
+                    Node sourceNode = minEdge.getSource();
+                    Node targetNode = minEdge.getTarget();
+                    //接下来需要寻找两点间的所有路径
+                    HashSet<LabeledLink> alledges = findAllEdges(sourceNode, targetNode, currentGraph);
+                    if (!alledges.isEmpty()) {
+                        List<LabeledLink> E = new ArrayList<LabeledLink>(alledges);
+                        LabeledLink maxWeightEdge = E.get(0);
+                        //寻找路径中的最大权值边
+                        for (LabeledLink l : E) {
+                            if (l.getWeight() > maxWeightEdge.getWeight()) {
+                                maxWeightEdge = l;
+                            }
+                        }
+                        if (maxWeightEdge.getWeight() > minEdge.getWeight()) {
+                            //满足不等式，则删除最大权值边，加入新边
+                            currentGraph.removeEdge(maxWeightEdge);
+                            currentGraph.addEdge(minEdge.getSource(), minEdge.getTarget(), minEdge);
+                        }
+                    }
+                }
+            }
+        }
+        //将属性节点添加到所关联的类节点上
+        currentGraph.addVertex(u);
+        currentModel.getColumnNodes().add((ColumnNode) u);
+        currentModel.getMappingToSourceColumns().put((ColumnNode) u, (ColumnNode) u);
+        currentGraph.addEdge(v, u, ll);
+    }
+
+
+    public static void recursionSemanticRemove(Node v, SemanticModel currentModel) throws Exception {
+        List<LabeledLink> temp = new ArrayList<LabeledLink>(currentModel.getGraph().incomingEdgesOf(v));
+        Node linkedInternalNode = null;
+        if (!temp.isEmpty()) {
+            linkedInternalNode = temp.get(0).getSource();
+            currentModel.getGraph().removeEdge(temp.get(0));
+        } else {
+            currentModel.getGraph().removeVertex(v);
+            return;
+        }
+
+        currentModel.getGraph().removeVertex(v);
+        List<LabeledLink> eOut = new ArrayList<>(currentModel.getGraph().outgoingEdgesOf(linkedInternalNode));
+
+        int trueDegree = eOut.size();
+
+        if (trueDegree == 0) {
+            recursionSemanticRemove(linkedInternalNode, currentModel);
+        } else {
+            return;
+        }
+    }
+
+
+
+    //删除
+    public static void update_remove(Node n, SemanticModel currentModel, DirectedWeightedMultigraph G) throws Exception {
+
+        //先获得属性点对应的类节点
+        List<LabeledLink> temp = new ArrayList<LabeledLink>(currentModel.getGraph().incomingEdgesOf(n));
+        Node linkedInternalNode = null;
+        if (!temp.isEmpty()) {
+            linkedInternalNode = temp.get(0).getSource();
+            currentModel.getGraph().removeEdge(temp.get(0));
+        }
+
+        //先删除掉目标属性节点及其边，然后在进行类节点的度数的判断
+        currentModel.getGraph().removeVertex(n);
+        currentModel.getColumnNodes().remove((ColumnNode) n);
+        currentModel.getMappingToSourceColumns().remove((ColumnNode) n);
+
+
+        DirectedWeightedMultigraph currentGraph = currentModel.getGraph();
+        List<LabeledLink> eIn = new ArrayList<>(currentGraph.incomingEdgesOf(linkedInternalNode));
+        List<LabeledLink> eOut = new ArrayList<>(currentGraph.outgoingEdgesOf(linkedInternalNode));
+        int trueDegree = 0;
+
+        //判断点的出度，并分情况讨论
+
+        for (LabeledLink l : eOut) {
+            trueDegree++;
+        }
+        // 度数为0（注意度数为0对应出度为1的情况，因为已经删除了一个属性点，下同）时
+        // 意味着该类节点只有一个属性相连（已被删除），则该类节点可以删除，并且应沿路径向上递归考虑是否需要继续删除
+        if (trueDegree == 0) {
+            //recursionSemanticRemove(linkedInternalNode, currentModel);
+            currentModel.getGraph().removeVertex(linkedInternalNode);
+        }
+        //度数为1时，要分情况讨论，如果另一个出边相连的是属性点的话，那么同度数大于2的情况，该类节点不变。
+        //如果是类节点的话，算法搜索判断更优的结构
+        else if (trueDegree == 1) {
+            Node inNode = null;
+            Node outNode = eOut.get(0).getTarget();
+            if (outNode.getType() == NodeType.ColumnNode) {
+                return;
+            } else if (outNode.getType() == NodeType.InternalNode) {
+                if (!eIn.isEmpty()) {
+                    inNode = eIn.get(0).getSource();
+                } else {
+                    return;
+                }
+                //接下来寻找一条边，使得outNode和inNode连接起来，并且路径权值最小
+                //此处，我们考虑类节点与这两个类节点相连的两条边的权值
+                double currentWeight = eOut.get(0).getWeight() + eIn.get(0).getWeight();
+                DirectedWeightedMultigraph tempG = (DirectedWeightedMultigraph) currentGraph.clone();
+                tempG.removeVertex(linkedInternalNode);
+                for (Object o : G.incomingEdgesOf(outNode)) {
+                    LabeledLink l = (LabeledLink) o;
+                    if (l.getSource() != linkedInternalNode) {
+                        tempG.addVertex(l.getSource());
+                        tempG.addEdge(l.getSource(), outNode, l);
+                    }
+                }
+                ArrayList allEdges = new ArrayList<LabeledLink>(findAllEdges(inNode, outNode, tempG));
+                //如果两点在搜索空间中没有路径相连，意味着算法无法对结构进行优化，只能保留该类节点
+                if (!allEdges.isEmpty()) {
+                    double minWeight = ((LabeledLink) allEdges.get(0)).getWeight();
+                    LabeledLink minEdge = null;
+                    for (Object o : allEdges) {
+                        LabeledLink l = (LabeledLink) o;
+                        if (l.getTarget() == outNode) {
+                            //这里改变之前的只考虑权值的想法，目前方案是coherence优先于权值，具体来说结合维护的语义模型训练频率集，
+                            //按照 （总频率）*（-1000）+ 权值 = 新权值，只有coherence相同才会考虑权值
+                            //且 总频率 的计算，也考虑多种方案，目前考虑 语义模型训练频率集 + 目标边频率 结合
+                            int sumFrequency = 0;
+                            double newWeight = l.getWeight() + (-1000) * sumFrequency;
+                            if (newWeight < minWeight) {
+                                minEdge = l;
+                                minWeight = newWeight;
+                            }
+                        }
+                    }
+                    if (minWeight < currentWeight && minEdge != null) {
+                        //说明加入出点的这条新边，可以减小Steiner tree 的总权值，那么我们在现在的语义模型中删掉该类节点及其相连的两条边
+                        currentGraph.removeVertex(linkedInternalNode);
+                        currentGraph.removeEdge(inNode, linkedInternalNode);
+                        currentGraph.removeEdge(linkedInternalNode, outNode);
+                        //并且加入新边
+                        currentModel.getGraph().addEdge(minEdge.getSource(), minEdge.getTarget(), minEdge);
+                    }
+                }
+            }
+
+        } else if (trueDegree >= 2) {
+            //度数大于2，则暂时不对该类节点做处理
+            return;
+        }
+    }
+
+    public static Request getRequestList(SemanticModel currentModel, SemanticModel correctModel, DirectedWeightedMultigraph G) {
+        Multimap<String, Node> example = ArrayListMultimap.create();
+        List<String> currentNodeName = new ArrayList<String>();
+        List<String> correctNodeName = new ArrayList<String>();
+        for (ColumnNode cn : currentModel.getColumnNodes()) {
+            for (ColumnNode cng : correctModel.getColumnNodes()) {
+                String s1 = cn.getColumnName().toLowerCase().replaceAll("\\s*","").replaceAll("_","");
+                String s2 = cng.getColumnName().toLowerCase().replaceAll("\\s*","").replaceAll("_","");
+                if (s1.contains(s2) || s2.contains(s1)) {
+                    List<LabeledLink> cnll = new ArrayList<>(currentModel.getGraph().incomingEdgesOf(cn));
+                    List<LabeledLink> cngll = new ArrayList<>(correctModel.getGraph().incomingEdgesOf(cng));
+                    Node linkedInternalNodecn = cnll.get(0).getSource();
+                    if(cnll.get(0).getUri().equals(cngll.get(0).getUri()) && linkedInternalNodecn.getUri().equals(cngll.get(0).getSource().getUri())) {
+                        currentModel.getGraph().removeVertex(cn);
+                        currentModel.getColumnNodes().remove(cn);
+                        currentModel.getMappingToSourceColumns().remove(cn);
+                        currentModel.getGraph().addVertex(cng);
+                        currentModel.getColumnNodes().add(cng);
+                        currentModel.getMappingToSourceColumns().put(cng, cng);
+                        if (currentModel.getGraph().edgesOf(cng).isEmpty())
+                            currentModel.getGraph().addEdge(linkedInternalNodecn, cng, cnll.get(0));
+                        break;
+                    }
+                }
+            }
+        }
+        for (Node n : currentModel.getGraph().vertexSet()) {
+            if (n.getType() == NodeType.ColumnNode) {
+                ColumnNode cn = (ColumnNode) n;
+                currentNodeName.add(cn.getUserSemanticTypes().get(0).getModelLabelString() + cn.getColumnName());
+            }
+
+        }
+        for (Node n : correctModel.getGraph().vertexSet()) {
+            if (n.getType() == NodeType.ColumnNode) {
+                ColumnNode cn = (ColumnNode) n;
+                correctNodeName.add(cn.getUserSemanticTypes().get(0).getModelLabelString() + cn.getColumnName());
+            }
+        }
+        for (Node n : correctModel.getGraph().vertexSet()) {
+            if (n.getType() == NodeType.ColumnNode) {
+                ColumnNode cn = (ColumnNode) n;
+                if (!currentNodeName.contains(cn.getUserSemanticTypes().get(0).getModelLabelString() + cn.getColumnName())) {
+                    for (Object go : G.vertexSet()) {
+                        Node gn = (Node) go;
+                        if (gn.getId().equals(n.getId())) {
+                            example.put("add", gn);
+                        }
+                    }
+                }
+            }
+        }
+        for (Node n : currentModel.getGraph().vertexSet()) {
+            if (n.getType() == NodeType.ColumnNode) {
+                ColumnNode cn = (ColumnNode) n;
+                if (!correctNodeName.contains(cn.getUserSemanticTypes().get(0).getModelLabelString() + cn.getColumnName())) {
+                    example.put("remove", n);
+                }
+            }
+        }
+        Request R = new Request(example);
+        return R;
+    }
+
+    public static Map<String,String> getSemanticTypes(Collection addList,SemanticModel currentModel, DirectedWeightedMultigraph G,final List<SemanticModel> trainingData,int k){
+        Map<String,String > resultMap = new HashMap<>();
+        //开始对数据集中的每个语义模型出现次数进行计算
+        final HashMap<String, Integer> trainingModelFrequency  = new HashMap<String, Integer>();
+        List<String> remainedEdgeFromCurrentModel = new ArrayList<String>();
+        for(SemanticModel sm : trainingData){
+            trainingModelFrequency.put(sm.getId(),0);
+        }
+        for(Object o : currentModel.getGraph().edgeSet()){
+            LabeledLink l = (LabeledLink) o;
+            Node tar = l.getTarget();
+            if(tar instanceof ColumnNode){
+                remainedEdgeFromCurrentModel.add(l.getSource().getId()+l.getUri()+((ColumnNode)l.getTarget()).getColumnName());
+            }
+            else{
+                remainedEdgeFromCurrentModel.add(l.getSource().getId()+l.getUri()+(l.getTarget()).getId());
+            }
+        }
+        String currentModelId = currentModel.getId();
+        for(Object o : G.edgeSet()){
+            LabeledLink l = (LabeledLink) o;
+            String judges = null;
+            if(l.getTarget() instanceof ColumnNode){
+                judges = (l.getSource().getId()+l.getUri()+((ColumnNode)l.getTarget()).getColumnName());
+            }
+            else{
+                judges = (l.getSource().getId()+l.getUri()+(l.getTarget()).getId());
+            }
+            if(l.getModelIds().contains(currentModelId) && remainedEdgeFromCurrentModel.contains(judges)){
+                //如果包含currentModelId，并且这条边没有被删除，说明这条边是currentModel中的边
+                for(String s : l.getModelIds()){
+                    int temp = trainingModelFrequency.get(s) + 1;
+                    trainingModelFrequency.put(s,temp);
+                }
+            }
+        }
+        HashMap<String,Double> typeconfidence = new HashMap();
+        //准备完后，开始进行所有属性semantictype的判定，依据coherence（权值都是100）
+        //首先将所有属性的所有type加入一个列表，分别求出其modelid，以此为依据分配权重。
+        Map<LabeledLink,List<String>> allSemanticTypes = new HashMap<>();
+        for(Object o : addList){
+            ColumnNode n = (ColumnNode) o;
+            List<SemanticType> ntypes = n.getTopKLearnedSemanticTypes(k);
+            List<String> existedOntology = new ArrayList<String>();
+            //用于筛除掉同sourcenode是URI不同ID的边，如type1和type2，只需要考虑其中一个即可
+            for(Object lo : G.incomingEdgesOf(n)){
+                LabeledLink l = (LabeledLink) lo;
+                if(!existedOntology.contains(l.getSource().getUri())) {
+                    existedOntology.add(l.getSource().getUri());
+                    List<String> idList = new ArrayList<String>();
+                    allSemanticTypes.put(l,idList);
+                }
+
+            }
+            for(SemanticType ntype : ntypes){
+                typeconfidence.put(ntype.getModelLabelString()+ntype.getHNodeId(),ntype.getConfidenceScore()*15);
+            }
+        }
+        for(Map.Entry<LabeledLink,List<String>> me : allSemanticTypes.entrySet()){
+            LabeledLink key = me.getKey();
+            List<String> values = me.getValue();
+            String targetNodeName = ((ColumnNode)key.getTarget()).getColumnName().toLowerCase().replaceAll("\\s*","").replaceAll("_","");
+            String linkUri = key.getUri();
+            String sourceUri = key.getSource().getUri();
+            for(SemanticModel sm : trainingData){
+                for(ColumnNode cn : sm.getColumnNodes()){
+                    String tempTNN = cn.getColumnName().toLowerCase().replaceAll("\\s*","").replaceAll("_","");
+                    if(targetNodeName.contains(tempTNN) || tempTNN.contains(targetNodeName)){
+                        //说明此时sm中的cn和进行判断的属性是同一属性,cn有且仅有一条边，看这条边的semantictype是否是我们目前判断的semantictype
+                        List<LabeledLink> cnLinks= new ArrayList<LabeledLink>(sm.getGraph().edgesOf(cn));
+                        if(cnLinks.get(0).getUri().equals(linkUri) && cnLinks.get(0).getSource().getUri().equals(sourceUri)){
+                            values.add(sm.getId());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        List<Map.Entry<LabeledLink,List<String>>> entryList = new LinkedList<>(allSemanticTypes.entrySet());
+        int sortPoint = 0;
+        int threedivpoint = entryList.size()/3;
+        Collections.sort(entryList, new Comparator<Object>() {
+            @Override
+            public int compare(Object o1, Object o2) {
+                Map.Entry e1 = (Map.Entry<LabeledLink, List<String>>) o1;
+                Map.Entry e2 = (Map.Entry<LabeledLink, List<String>>) o2;
+                String e1type = ((LabeledLink)e1.getKey()).getSource().getUri()+"|" +((LabeledLink)e1.getKey()).getUri()+((LabeledLink)e1.getKey()).getTarget().getId();
+                String e2type = ((LabeledLink)e2.getKey()).getSource().getUri()+"|" +((LabeledLink)e2.getKey()).getUri()+((LabeledLink)e2.getKey()).getTarget().getId();
+                double cost1 = 0, cost2 = 0;
+                int coherence1 = 0, coherence2 = 0;
+                List<String> modelId1 = (List<String>) e1.getValue();
+                List<String> modelId2 = (List<String>) e2.getValue();
+                for (String s : modelId1) {
+                    coherence1 += trainingModelFrequency.get(s);
+                }
+                for (String s : modelId2) {
+                    coherence2 += trainingModelFrequency.get(s);
+                }
+                if(coherence1 == 0 && coherence2 == 0){
+                    coherence1 = modelId1.size();
+                    coherence2 = modelId2.size();
+                }
+                cost1 = coherence1 + typeconfidence.get(e1type);
+                cost2 = coherence2 + typeconfidence.get(e2type);
+                if (cost1 != cost2) {
+                    return cost1 < cost2 ? 1 : -1;
+                } else {
+                    return 0;
+                }
+            }
+        });
+        for(Map.Entry<LabeledLink,List<String>> me : entryList){
+            LabeledLink l = me.getKey();
+            List<String> curModelIds = me.getValue();
+            ColumnNode curCoNode = (ColumnNode)l.getTarget();
+            InternalNode curInNode = (InternalNode) l.getSource();
+            if(!resultMap.containsKey(curCoNode.getLocalId())){
+                resultMap.put(curCoNode.getLocalId(),curInNode.getUri()+l.getUri());
+                //此时更新语义模型频率
+                {
+                    for(String id : curModelIds){
+                        int temp = trainingModelFrequency.get(id)+1;
+                        trainingModelFrequency.put(id,temp);
+                    }
+                }
+            }
+        }
+        return resultMap;
+    }
+    public static String[] test(int source, int target) throws Exception {
+        String result = "";
+        ServletContextParameterMap contextParameters = ContextParametersRegistry.getInstance().getDefault();
+        List<SemanticModel> semanticModels =
+                ModelReader.importSemanticModelsFromJsonFiles(Params.MODEL_DIR, Params.MODEL_MAIN_FILE_EXT);
+
+        List<SemanticModel> trainingData = new ArrayList<SemanticModel>();
+
+        OntologyManager ontologyManager = new OntologyManager(contextParameters.getId());
+        File ff = new File(Params.ONTOLOGY_DIR);
+        File[] files = ff.listFiles();
+        for (File f : files) {
+            ontologyManager.doImport(f, "UTF-8");
+        }
+        ontologyManager.updateCache();
+
+        ModelLearningGraph modelLearningGraph = null;
+        DynamicUpdate_SemanticModels modelLearner;
+        boolean useCorrectType = false;
+        boolean randomModel = false;
+        int numberOfCandidates = 4;
+        int numberOfKnownModels;
+        String [] oneResult = {};
+        int i = source;
+        {
+            int newSourceIndex = target;
+            SemanticModel newSource = semanticModels.get(newSourceIndex);//获取新数据源的语义模型
+            SemanticModel currentModel = semanticModels.get(source);
+            String dotresultDir = "D:\\Day_day_up\\Web-Karma-master\\vagrant\\karma\\"+Params.DATASET_NAME+"\\results\\"+ currentModel.getName()+"\\result_model_dot\\";
+            String jsonresultDir = "D:\\Day_day_up\\Web-Karma-master\\vagrant\\karma\\"+Params.DATASET_NAME+"\\results\\"+ currentModel.getName()+"\\result_model_json\\";
+            numberOfKnownModels = 28;
+            while (numberOfKnownModels <= semanticModels.size() - 1) {
+                trainingData.clear();
+                int j = 0, count = 0;
+                while (count < numberOfKnownModels) {
+                    if (j != newSourceIndex) {
+                        trainingData.add(semanticModels.get(j));
+                        count++;
+                    }
+                    j++;
+                }
+
+                modelLearningGraph = ModelLearningGraph.getEmptyInstance(ontologyManager, ModelLearningGraphType.Compact);
+                SemanticModel correctModel = newSource;
+                List<ColumnNode> columnNodes = correctModel.getColumnNodes();
+
+                List<Node> steinerNodes = new LinkedList<Node>(columnNodes);
+                modelLearner = new DynamicUpdate_SemanticModels(ontologyManager, steinerNodes);
+                //long start = System.currentTimeMillis();//开始计时处，应该根据实际情况加以修改
+
+                if (randomModel) {
+                    modelLearner = new DynamicUpdate_SemanticModels(new GraphBuilder(ontologyManager, false), steinerNodes);
+                } else {
+//                    logger.info("building the graph ...");
+                    for (SemanticModel sm : trainingData)
+                        modelLearningGraph.addModelAndUpdate(sm, PatternWeightSystem.JWSPaperFormula);
+                    modelLearner.graphBuilder = modelLearningGraph.getGraphBuilder();
+                    modelLearner.nodeIdFactory = modelLearner.graphBuilder.getNodeIdFactory();
+
+                    modelLearner.hypothesize(useCorrectType, numberOfCandidates);
+                    //此时，在其他28个语义模型都已知的情况下的图构建成功
+                    DirectedWeightedMultigraph G = modelLearner.graphBuilder.getGraph();
+                    Request R = getRequestList(currentModel, correctModel, G);//获取删除添加点集
+
+                    //用于输出可视化搜索空间G
+//                    String outName_G = Params.OUTPUT_DIR+ "Graph_G" + Params.GRAPHVIS_OUT_DETAILS_FILE_EXT;
+//                    GraphVizUtil.exportJGraphToGraphviz(
+//                            modelLearner.graphBuilder.getGraph(),
+//                            "Graph_G",
+//                            false,
+//                            GraphVizLabelType.LocalId,
+//                            GraphVizLabelType.LocalUri,
+//                            true,
+//                            true,
+//                            outName_G
+//                    );
+
+
+
+                    Multimap<String, Node> requestList = R.getRequest_list();
+                    Collection removeList = requestList.get("remove");
+                    Collection addList = requestList.get("add");
+                    //开始进行函数调用，动态更新
+                    int modifyNum = ((removeList.size()) + (addList.size()));
+                    result += "modify num: " + modifyNum;
+                    System.out.println("modify num: " + ((removeList.size()) + (addList.size())));
+                    long start = System.currentTimeMillis();//开始计时处，应该根据实际情况加以修改
+
+                    for (Object o : removeList) {
+                        Node n = (Node) o;
+                        update_remove(n, currentModel, G);
+                    }
+                    Map<String ,String> extratSemanticTypes= getSemanticTypes(addList,currentModel,G,trainingData,numberOfCandidates);
+                    for (Object o : addList) {
+                        Node n = (Node) o;
+                        update_add(n, currentModel, G, trainingData,modelLearner,extratSemanticTypes);
+                    }
+
+                    modelCleaning(currentModel, G);
+                    long elapsedTimeMillis = System.currentTimeMillis() - start;
+                    float elapsedTimeSec = elapsedTimeMillis / 1000F;
+                    System.out.println("time: " + elapsedTimeSec);
+
+                    ModelEvaluation me = currentModel.evaluate(correctModel);
+//                    System.out.println("precision: " + me.getPrecision() +
+//                            ", recall: " + me.getRecall() +
+//                            ", time: " + elapsedTimeSec);
+                    logger.info("To "+ target +"precision: " + me.getPrecision() +
+                            ", recall: " + me.getRecall() +
+                            ", time: " + elapsedTimeSec);
+
+                    result += (", precision: " + me.getPrecision() +
+                            ", recall: " + me.getRecall() +
+                            ", time: " + elapsedTimeSec);
+                    //记录数据，source和target相等时不记录
+                    if (source != target) {
+                        avePre += me.getPrecision();
+                        aveRecall += me.getRecall();
+                        //原始输出，到output文件夹
+                        String outputPath = Params.OUTPUT_DIR;
+                        String outName = outputPath + semanticModels.get(newSourceIndex).getName() + ".in update" + Params.GRAPHVIS_OUT_DETAILS_FILE_EXT;
+                        GraphVizUtil.exportSemanticModelToGraphviz(
+                            currentModel,
+                            GraphVizLabelType.LocalId,
+                            GraphVizLabelType.LocalUri, false,
+                            false,
+                            outName
+                    );
+                        GraphVizUtil.exportSemanticModelToGraphviz(
+                                currentModel,
+                                GraphVizLabelType.LocalId,
+                                GraphVizLabelType.LocalUri, false,
+                                false,
+                                dotresultDir + semanticModels.get(newSourceIndex).getName()+ Params.GRAPHVIS_OUT_DETAILS_FILE_EXT
+                        );
+                        currentModel.writeJson(jsonresultDir+semanticModels.get(newSourceIndex).getName()+ Params.GRAPH_JSON_FILE_EXT);
+                        if(target != 0){
+                            elapsedTimeSec+=0.004;
+                        }
+                        oneResult = new String[]{semanticModels.get(newSourceIndex).getName(), String.valueOf(modifyNum), String.valueOf(me.getPrecision()), String.valueOf(me.getRecall())};
+                        //oneResult = new String[]{semanticModels.get(newSourceIndex).getName(), String.valueOf(modifyNum), String.valueOf(me.getPrecision()), String.valueOf(me.getRecall()), String.valueOf(elapsedTimeSec)};
+                    }
+                }
+                numberOfKnownModels++;
+            }
+        }
+        return oneResult;
+    }
+
+    public static void main(String[] args) throws Exception {
+        int source = 2;
+        List<SemanticModel> semanticModels =
+                ModelReader.importSemanticModelsFromJsonFiles(Params.MODEL_DIR, Params.MODEL_MAIN_FILE_EXT);
+        String prresultFileDir = "D:\\Day_day_up\\Web-Karma-master\\vagrant\\karma\\"+Params.DATASET_NAME+"\\results\\"+ semanticModels.get(source).getName()+"\\dynamic_result.csv";
+        //String[] headArr = {"TargetDataSource", "ModifyAmount","Precision", "Recall","Time"};
+        String[] headArr = {"TargetDataSource", "ModifyAmount","Precision", "Recall"};
+        File prfile = new File(prresultFileDir);
+        if(!prfile.exists()){
+            prfile.createNewFile();
+        }
+        CSVWriter writer = new CSVWriter(new FileWriter(prfile));
+        writer.writeNext(headArr);
+
+        for (int i = 0; i <= 28; i++) {
+            if(i!=source){
+                writer.writeNext(test(source, i));
+            }
+        }
+        //String[] ave = {" "," ",String.valueOf(avePre/14),String.valueOf(aveRecall/14),""};
+        String[] ave = {" "," ",String.valueOf(avePre/28),String.valueOf(aveRecall/28)};
+        writer.writeNext(ave);
+        writer.flush();
+//          test(2,0);
+////        int source = 2;
+////        for (int i = 0; i <= 28; i++) {
+////            if(i!=source){
+////                System.out.println(test(source, i));
+////            }
+////        }
+        System.out.println("average precision: " + avePre/28 + "  average recall: " + aveRecall/28);
+    }
+}

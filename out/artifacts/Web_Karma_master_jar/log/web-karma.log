@@ -1,0 +1,196 @@
+WARN [2021-11-25 13:11:38,376] (RDFDefaultErrorHandler->warning->36): (line 20 column 71): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,378] (RDFDefaultErrorHandler->warning->36): (line 23 column 77): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,378] (RDFDefaultErrorHandler->warning->36): (line 36 column 52): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,379] (RDFDefaultErrorHandler->warning->36): (line 39 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,379] (RDFDefaultErrorHandler->warning->36): (line 40 column 49): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,380] (RDFDefaultErrorHandler->warning->36): (line 42 column 48): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,380] (RDFDefaultErrorHandler->warning->36): (line 45 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,381] (RDFDefaultErrorHandler->warning->36): (line 46 column 44): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,381] (RDFDefaultErrorHandler->warning->36): (line 48 column 49): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,381] (RDFDefaultErrorHandler->warning->36): (line 51 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,382] (RDFDefaultErrorHandler->warning->36): (line 52 column 49): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,382] (RDFDefaultErrorHandler->warning->36): (line 54 column 47): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,383] (RDFDefaultErrorHandler->warning->36): (line 57 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,383] (RDFDefaultErrorHandler->warning->36): (line 58 column 49): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,383] (RDFDefaultErrorHandler->warning->36): (line 60 column 47): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,384] (RDFDefaultErrorHandler->warning->36): (line 63 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,384] (RDFDefaultErrorHandler->warning->36): (line 64 column 44): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,384] (RDFDefaultErrorHandler->warning->36): (line 66 column 50): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,385] (RDFDefaultErrorHandler->warning->36): (line 69 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,385] (RDFDefaultErrorHandler->warning->36): (line 70 column 49): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,386] (RDFDefaultErrorHandler->warning->36): (line 72 column 48): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,386] (RDFDefaultErrorHandler->warning->36): (line 75 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,386] (RDFDefaultErrorHandler->warning->36): (line 76 column 49): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,387] (RDFDefaultErrorHandler->warning->36): (line 94 column 46): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,387] (RDFDefaultErrorHandler->warning->36): (line 97 column 79): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,387] (RDFDefaultErrorHandler->warning->36): (line 104 column 44): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,388] (RDFDefaultErrorHandler->warning->36): (line 107 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,388] (RDFDefaultErrorHandler->warning->36): (line 125 column 44): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,388] (RDFDefaultErrorHandler->warning->36): (line 128 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,389] (RDFDefaultErrorHandler->warning->36): (line 129 column 48): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,389] (RDFDefaultErrorHandler->warning->36): (line 136 column 45): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,390] (RDFDefaultErrorHandler->warning->36): (line 139 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,390] (RDFDefaultErrorHandler->warning->36): (line 140 column 48): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,390] (RDFDefaultErrorHandler->warning->36): (line 147 column 48): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,390] (RDFDefaultErrorHandler->warning->36): (line 150 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,391] (RDFDefaultErrorHandler->warning->36): (line 151 column 48): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,391] (RDFDefaultErrorHandler->warning->36): (line 158 column 43): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,391] (RDFDefaultErrorHandler->warning->36): (line 161 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,392] (RDFDefaultErrorHandler->warning->36): (line 162 column 43): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,392] (RDFDefaultErrorHandler->warning->36): (line 169 column 46): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,392] (RDFDefaultErrorHandler->warning->36): (line 172 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,392] (RDFDefaultErrorHandler->warning->36): (line 173 column 48): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,393] (RDFDefaultErrorHandler->warning->36): (line 180 column 43): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,393] (RDFDefaultErrorHandler->warning->36): (line 183 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,393] (RDFDefaultErrorHandler->warning->36): (line 184 column 45): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,394] (RDFDefaultErrorHandler->warning->36): (line 191 column 44): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,394] (RDFDefaultErrorHandler->warning->36): (line 194 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,394] (RDFDefaultErrorHandler->warning->36): (line 195 column 48): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,394] (RDFDefaultErrorHandler->warning->36): (line 213 column 33): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,396] (RDFDefaultErrorHandler->warning->36): (line 215 column 54): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,397] (RDFDefaultErrorHandler->warning->36): (line 217 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,397] (RDFDefaultErrorHandler->warning->36): (line 224 column 33): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,397] (RDFDefaultErrorHandler->warning->36): (line 226 column 54): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,398] (RDFDefaultErrorHandler->warning->36): (line 228 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,398] (RDFDefaultErrorHandler->warning->36): (line 235 column 34): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,398] (RDFDefaultErrorHandler->warning->36): (line 237 column 53): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,399] (RDFDefaultErrorHandler->warning->36): (line 239 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,399] (RDFDefaultErrorHandler->warning->36): (line 246 column 42): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,399] (RDFDefaultErrorHandler->warning->36): (line 248 column 52): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,400] (RDFDefaultErrorHandler->warning->36): (line 250 column 79): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,400] (RDFDefaultErrorHandler->warning->36): (line 257 column 38): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,400] (RDFDefaultErrorHandler->warning->36): (line 259 column 53): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,401] (RDFDefaultErrorHandler->warning->36): (line 261 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,401] (RDFDefaultErrorHandler->warning->36): (line 268 column 33): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,401] (RDFDefaultErrorHandler->warning->36): (line 270 column 54): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,401] (RDFDefaultErrorHandler->warning->36): (line 272 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,402] (RDFDefaultErrorHandler->warning->36): (line 279 column 39): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,402] (RDFDefaultErrorHandler->warning->36): (line 281 column 53): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,402] (RDFDefaultErrorHandler->warning->36): (line 283 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,402] (RDFDefaultErrorHandler->warning->36): (line 290 column 40): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,403] (RDFDefaultErrorHandler->warning->36): (line 292 column 52): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,403] (RDFDefaultErrorHandler->warning->36): (line 294 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 13:11:38,404] (RDFDefaultErrorHandler->warning->36): (line 301 column 37): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,404] (RDFDefaultErrorHandler->warning->36): (line 307 column 41): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,404] (RDFDefaultErrorHandler->warning->36): (line 313 column 39): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,404] (RDFDefaultErrorHandler->warning->36): (line 319 column 40): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,405] (RDFDefaultErrorHandler->warning->36): (line 331 column 35): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 13:11:38,405] (RDFDefaultErrorHandler->warning->36): (line 334 column 83): {W102} unqualified use of rdf:resource is deprecated.
+ERROR [2021-11-25 13:11:38,586] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#embodimentOf
+ERROR [2021-11-25 13:11:38,587] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#embodimentOf
+ERROR [2021-11-25 13:11:38,588] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#transformationOf
+ERROR [2021-11-25 13:11:38,589] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#transformationOf
+ERROR [2021-11-25 13:11:38,589] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#imitation
+ERROR [2021-11-25 13:11:38,589] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#imitation
+ERROR [2021-11-25 13:11:38,590] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#alternate
+ERROR [2021-11-25 13:11:38,590] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#alternate
+ERROR [2021-11-25 13:11:38,591] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#embodiment
+ERROR [2021-11-25 13:11:38,591] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#embodiment
+ERROR [2021-11-25 13:11:38,591] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#producerOf
+ERROR [2021-11-25 13:11:38,592] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#producerOf
+ERROR [2021-11-25 13:11:38,594] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://xmlns.com/foaf/0.1/isPrimaryTopicOf
+ERROR [2021-11-25 13:11:38,594] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://xmlns.com/foaf/0.1/isPrimaryTopicOf
+INFO [2021-11-25 13:11:38,621] (ModelLearningGraph->initializeFromJsonRepository->186): initializing the graph from models in the json repository ...
+INFO [2021-11-25 13:11:38,622] (GraphUtil->exportJson->489): exporting the graph to json ...
+INFO [2021-11-25 13:11:38,630] (GraphUtil->exportJson->507): export is done.
+INFO [2021-11-25 13:11:38,631] (GraphVizUtil->exportJGraphToGraphviz->281): exporting the graph to graphviz ...
+INFO [2021-11-25 13:11:38,634] (GraphVizUtil->exportJGraphToGraphviz->292): export is done.
+INFO [2021-11-25 13:11:38,634] (ModelLearningGraph->initializeFromJsonRepository->218): initialization is done!
+INFO [2021-11-25 13:11:38,634] (ModelLearningGraph-><init>->147): number of nodes: 0
+INFO [2021-11-25 13:11:38,634] (ModelLearningGraph-><init>->148): number of links: 0
+WARN [2021-11-25 15:31:48,616] (RDFDefaultErrorHandler->warning->36): (line 20 column 71): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,618] (RDFDefaultErrorHandler->warning->36): (line 23 column 77): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,619] (RDFDefaultErrorHandler->warning->36): (line 36 column 52): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,619] (RDFDefaultErrorHandler->warning->36): (line 39 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,620] (RDFDefaultErrorHandler->warning->36): (line 40 column 49): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,620] (RDFDefaultErrorHandler->warning->36): (line 42 column 48): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,621] (RDFDefaultErrorHandler->warning->36): (line 45 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,621] (RDFDefaultErrorHandler->warning->36): (line 46 column 44): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,622] (RDFDefaultErrorHandler->warning->36): (line 48 column 49): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,622] (RDFDefaultErrorHandler->warning->36): (line 51 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,623] (RDFDefaultErrorHandler->warning->36): (line 52 column 49): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,623] (RDFDefaultErrorHandler->warning->36): (line 54 column 47): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,623] (RDFDefaultErrorHandler->warning->36): (line 57 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,624] (RDFDefaultErrorHandler->warning->36): (line 58 column 49): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,626] (RDFDefaultErrorHandler->warning->36): (line 60 column 47): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,626] (RDFDefaultErrorHandler->warning->36): (line 63 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,627] (RDFDefaultErrorHandler->warning->36): (line 64 column 44): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,627] (RDFDefaultErrorHandler->warning->36): (line 66 column 50): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,628] (RDFDefaultErrorHandler->warning->36): (line 69 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,628] (RDFDefaultErrorHandler->warning->36): (line 70 column 49): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,629] (RDFDefaultErrorHandler->warning->36): (line 72 column 48): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,629] (RDFDefaultErrorHandler->warning->36): (line 75 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,630] (RDFDefaultErrorHandler->warning->36): (line 76 column 49): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,630] (RDFDefaultErrorHandler->warning->36): (line 94 column 46): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,630] (RDFDefaultErrorHandler->warning->36): (line 97 column 79): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,631] (RDFDefaultErrorHandler->warning->36): (line 104 column 44): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,631] (RDFDefaultErrorHandler->warning->36): (line 107 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,631] (RDFDefaultErrorHandler->warning->36): (line 125 column 44): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,632] (RDFDefaultErrorHandler->warning->36): (line 128 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,632] (RDFDefaultErrorHandler->warning->36): (line 129 column 48): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,632] (RDFDefaultErrorHandler->warning->36): (line 136 column 45): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,633] (RDFDefaultErrorHandler->warning->36): (line 139 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,633] (RDFDefaultErrorHandler->warning->36): (line 140 column 48): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,634] (RDFDefaultErrorHandler->warning->36): (line 147 column 48): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,635] (RDFDefaultErrorHandler->warning->36): (line 150 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,635] (RDFDefaultErrorHandler->warning->36): (line 151 column 48): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,635] (RDFDefaultErrorHandler->warning->36): (line 158 column 43): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,636] (RDFDefaultErrorHandler->warning->36): (line 161 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,636] (RDFDefaultErrorHandler->warning->36): (line 162 column 43): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,636] (RDFDefaultErrorHandler->warning->36): (line 169 column 46): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,637] (RDFDefaultErrorHandler->warning->36): (line 172 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,637] (RDFDefaultErrorHandler->warning->36): (line 173 column 48): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,637] (RDFDefaultErrorHandler->warning->36): (line 180 column 43): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,638] (RDFDefaultErrorHandler->warning->36): (line 183 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,638] (RDFDefaultErrorHandler->warning->36): (line 184 column 45): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,638] (RDFDefaultErrorHandler->warning->36): (line 191 column 44): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,639] (RDFDefaultErrorHandler->warning->36): (line 194 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,639] (RDFDefaultErrorHandler->warning->36): (line 195 column 48): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,639] (RDFDefaultErrorHandler->warning->36): (line 213 column 33): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,640] (RDFDefaultErrorHandler->warning->36): (line 215 column 54): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,642] (RDFDefaultErrorHandler->warning->36): (line 217 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,642] (RDFDefaultErrorHandler->warning->36): (line 224 column 33): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,643] (RDFDefaultErrorHandler->warning->36): (line 226 column 54): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,643] (RDFDefaultErrorHandler->warning->36): (line 228 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,643] (RDFDefaultErrorHandler->warning->36): (line 235 column 34): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,644] (RDFDefaultErrorHandler->warning->36): (line 237 column 53): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,644] (RDFDefaultErrorHandler->warning->36): (line 239 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,644] (RDFDefaultErrorHandler->warning->36): (line 246 column 42): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,645] (RDFDefaultErrorHandler->warning->36): (line 248 column 52): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,645] (RDFDefaultErrorHandler->warning->36): (line 250 column 79): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,645] (RDFDefaultErrorHandler->warning->36): (line 257 column 38): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,646] (RDFDefaultErrorHandler->warning->36): (line 259 column 53): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,646] (RDFDefaultErrorHandler->warning->36): (line 261 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,647] (RDFDefaultErrorHandler->warning->36): (line 268 column 33): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,647] (RDFDefaultErrorHandler->warning->36): (line 270 column 54): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,647] (RDFDefaultErrorHandler->warning->36): (line 272 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,648] (RDFDefaultErrorHandler->warning->36): (line 279 column 39): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,648] (RDFDefaultErrorHandler->warning->36): (line 281 column 53): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,648] (RDFDefaultErrorHandler->warning->36): (line 283 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,648] (RDFDefaultErrorHandler->warning->36): (line 290 column 40): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,649] (RDFDefaultErrorHandler->warning->36): (line 292 column 52): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,649] (RDFDefaultErrorHandler->warning->36): (line 294 column 83): {W102} unqualified use of rdf:resource is deprecated.
+WARN [2021-11-25 15:31:48,649] (RDFDefaultErrorHandler->warning->36): (line 301 column 37): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,650] (RDFDefaultErrorHandler->warning->36): (line 307 column 41): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,650] (RDFDefaultErrorHandler->warning->36): (line 313 column 39): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,650] (RDFDefaultErrorHandler->warning->36): (line 319 column 40): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,650] (RDFDefaultErrorHandler->warning->36): (line 331 column 35): {W102} unqualified use of rdf:about is deprecated.
+WARN [2021-11-25 15:31:48,651] (RDFDefaultErrorHandler->warning->36): (line 334 column 83): {W102} unqualified use of rdf:resource is deprecated.
+ERROR [2021-11-25 15:31:48,854] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#embodimentOf
+ERROR [2021-11-25 15:31:48,854] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#embodimentOf
+ERROR [2021-11-25 15:31:48,856] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#transformationOf
+ERROR [2021-11-25 15:31:48,856] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#transformationOf
+ERROR [2021-11-25 15:31:48,857] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#imitation
+ERROR [2021-11-25 15:31:48,857] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#imitation
+ERROR [2021-11-25 15:31:48,858] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#alternate
+ERROR [2021-11-25 15:31:48,858] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#alternate
+ERROR [2021-11-25 15:31:48,859] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#embodiment
+ERROR [2021-11-25 15:31:48,859] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#embodiment
+ERROR [2021-11-25 15:31:48,860] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#producerOf
+ERROR [2021-11-25 15:31:48,861] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://purl.org/vocab/frbr/core#producerOf
+ERROR [2021-11-25 15:31:48,864] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://xmlns.com/foaf/0.1/isPrimaryTopicOf
+ERROR [2021-11-25 15:31:48,865] (OntologyHandler->getResourceLabel->85): No rdfs:label and rdfs:comment for resource:http://xmlns.com/foaf/0.1/isPrimaryTopicOf
+INFO [2021-11-25 15:31:48,893] (ModelLearningGraph-><init>->136): loading the alignment graph ...
+INFO [2021-11-25 15:31:48,893] (ModelLearningGraph-><init>->144): loading is done!
+INFO [2021-11-25 15:31:48,894] (ModelLearningGraph-><init>->147): number of nodes: 0
+INFO [2021-11-25 15:31:48,894] (ModelLearningGraph-><init>->148): number of links: 0

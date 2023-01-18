@@ -1,0 +1,9 @@
+edu\isi\karma\util\MySQLUtil.class
+edu\isi\karma\util\PostGISUtil.class
+edu\isi\karma\util\SybaseUtil.class
+edu\isi\karma\rdf\DatabaseTableRDFGenerator.class
+edu\isi\karma\util\OracleUtil.class
+edu\isi\karma\util\AbstractJDBCUtil.class
+edu\isi\karma\util\IngresUtil.class
+edu\isi\karma\util\SQLServerUtil.class
+edu\isi\karma\util\JDBCUtilFactory.class
