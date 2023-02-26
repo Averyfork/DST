@@ -26,7 +26,8 @@ public class Request {
     }
 
 
-    public static Request getRequestList(SemanticModel currentModel, SemanticModel correctModel, DirectedWeightedMultigraph G) {
+    public static Request getRequestList(SemanticModel currentModel, SemanticModel correctModel,
+                                         DirectedWeightedMultigraph G) {
         Multimap<String, Node> example = ArrayListMultimap.create();
         List<String> currentNodeName = new ArrayList<String>();
         List<String> correctNodeName = new ArrayList<String>();
@@ -45,8 +46,9 @@ public class Request {
                         currentModel.getGraph().addVertex(cng);
                         currentModel.getColumnNodes().add(cng);
                         currentModel.getMappingToSourceColumns().put(cng, cng);
-                        if (currentModel.getGraph().edgesOf(cng).isEmpty())
+                        if (currentModel.getGraph().edgesOf(cng).isEmpty()) {
                             currentModel.getGraph().addEdge(linkedInternalNodecn, cng, cnll.get(0));
+                        }
                         break;
                     }
                 }

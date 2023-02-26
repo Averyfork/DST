@@ -55,6 +55,6 @@ public class ModelRefinement {
 
 
     public static void modelRefine(SemanticModel currentModel, DirectedWeightedMultigraph G){
-        SemanticModel 
+
     }
 }

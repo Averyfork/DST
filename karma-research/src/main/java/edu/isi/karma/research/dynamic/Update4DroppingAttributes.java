@@ -34,7 +34,6 @@ public class Update4DroppingAttributes {
     }
 
 
-
     public static void update_remove(Node n, SemanticModel currentModel, DirectedWeightedMultigraph G) throws Exception {
 
         List<LabeledLink> temp = new ArrayList<LabeledLink>(currentModel.getGraph().incomingEdgesOf(n));
@@ -59,8 +58,7 @@ public class Update4DroppingAttributes {
         }
         if (trueDegree == 0) {
             currentModel.getGraph().removeVertex(linkedInternalNode);
-        }
-        else if (trueDegree == 1) {
+        } else if (trueDegree == 1) {
             Node inNode = null;
             Node outNode = eOut.get(0).getTarget();
             if (outNode.getType() == NodeType.ColumnNode) {
@@ -74,16 +72,15 @@ public class Update4DroppingAttributes {
                 double currentWeight = eOut.get(0).getWeight() + eIn.get(0).getWeight();
                 DirectedWeightedMultigraph tempG = (DirectedWeightedMultigraph) currentGraph.clone();
                 tempG.removeVertex(linkedInternalNode);
-                if(!G.vertexSet().contains(outNode)){
+                if (!G.vertexSet().contains(outNode)) {
                     return;
                 }
                 for (Object o : G.incomingEdgesOf(outNode)) {
                     DefaultLink dl = (DefaultLink) o;
                     LabeledLink l = null;
-                    if(dl.getType() != LinkType.CompactObjectPropertyLink && dl.getType() != LinkType.CompactSubClassLink){
+                    if (dl.getType() != LinkType.CompactObjectPropertyLink && dl.getType() != LinkType.CompactSubClassLink) {
                         l = (LabeledLink) o;
-                    }
-                    else{
+                    } else {
                         continue;
                     }
                     if (l.getSource() != linkedInternalNode) {
