@@ -2,30 +2,32 @@ package edu.isi.karma.research.dynamic;
 
 import com.google.common.collect.Multimap;
 import com.opencsv.CSVWriter;
+import edu.isi.karma.config.ModelingConfiguration;
+import edu.isi.karma.config.ModelingConfigurationRegistry;
 import edu.isi.karma.modeling.alignment.*;
-import edu.isi.karma.modeling.alignment.learner.ModelLearningGraph;
-import edu.isi.karma.modeling.alignment.learner.ModelLearningGraphType;
-import edu.isi.karma.modeling.alignment.learner.ModelReader;
-import edu.isi.karma.modeling.alignment.learner.PatternWeightSystem;
+import edu.isi.karma.modeling.alignment.learner.*;
 import edu.isi.karma.modeling.ontology.OntologyManager;
 import edu.isi.karma.modeling.research.Params;
 import edu.isi.karma.rep.alignment.*;
 import edu.isi.karma.rep.alignment.SemanticType.Origin;
+import edu.isi.karma.util.RandomGUID;
 import edu.isi.karma.webserver.ContextParametersRegistry;
 import edu.isi.karma.webserver.ServletContextParameterMap;
+import org.jgrapht.graph.AsUndirectedGraph;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
+import org.jgrapht.graph.WeightedMultigraph;
+import org.python.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.text.DecimalFormat;
 import java.util.*;
 
 import static edu.isi.karma.research.dynamic.Request.getRequestList;
 import static edu.isi.karma.research.dynamic.ModelRefinement.modelCleaning;
 import static edu.isi.karma.research.dynamic.Update4AddingAttributes.update4AddingAttributes;
-import static edu.isi.karma.research.dynamic.Update4DroppingAttributes.update_remove;
+import static edu.isi.karma.research.dynamic.Update4DroppingAttributes.update4DroppingAttributes;
 
 public class DynamicUpdate_SemanticModels {
 
@@ -43,7 +45,7 @@ public class DynamicUpdate_SemanticModels {
         if (ontologyManager == null ||
                 steinerNodes == null ||
                 steinerNodes.isEmpty()) {
-            logger.error("cannot instanciate model learner!");
+            logger.error("cannot instantiate model learner!");
             return;
         }
         GraphBuilder gb = ModelLearningGraph.getInstance(ontologyManager, ModelLearningGraphType.Compact).getGraphBuilder();
@@ -58,7 +60,7 @@ public class DynamicUpdate_SemanticModels {
         if (graphBuilder == null ||
                 steinerNodes == null ||
                 steinerNodes.isEmpty()) {
-            logger.error("cannot instanciate model learner!");
+            logger.error("cannot instantiate model learner!");
             return;
         }
         this.ontologyManager = graphBuilder.getOntologyManager();
@@ -79,6 +81,9 @@ public class DynamicUpdate_SemanticModels {
     }
 
     public void hypothesize(boolean useCorrectTypes, int numberOfCandidates) throws Exception {
+        ModelingConfiguration modelingConfiguration = ModelingConfigurationRegistry.getInstance().getModelingConfiguration(ontologyManager.getContextId());
+        List<SortableSemanticModel> sortableSemanticModels = new ArrayList<SortableSemanticModel>();
+
         Map<ColumnNode, ColumnNode> mappingToSourceColumns = new HashMap<ColumnNode, ColumnNode>();
         List<ColumnNode> columnNodes = new LinkedList<ColumnNode>();
         for (Node n : steinerNodes) {
@@ -92,13 +97,53 @@ public class DynamicUpdate_SemanticModels {
         for (Node n : steinerNodes) {
             if (n instanceof ColumnNode) {
                 ColumnNode steinerNode = (ColumnNode) n;
-                List<SemanticType> candidateSemanticTypes = getCandidateSteinerSets(steinerNode, useCorrectTypes, numberOfCandidates);
+                List<SemanticType> candidateSemanticTypes = getCandidateSteinerSets(steinerNode,
+                        useCorrectTypes, numberOfCandidates);
                 addSteinerNodeToTheGraph(steinerNode, candidateSemanticTypes);
             }
         }
+
+        Set<Node> sn = new HashSet<Node>(steinerNodes);
+        List<DirectedWeightedMultigraph<Node, LabeledLink>> topKSteinerTrees;
+        if (this.graphBuilder instanceof GraphBuilderTopK) {
+            topKSteinerTrees =  ((GraphBuilderTopK)this.graphBuilder).getTopKSteinerTrees(sn,
+                    modelingConfiguration.getTopKSteinerTree(),
+                    null, null, false);
+//			topKSteinerTrees =  ((GraphBuilderTopK)this.graphBuilder).getTopKSteinerTrees(sn,
+//					1,
+//					null, null, false);
+        }
+        else
+        {
+            topKSteinerTrees = new LinkedList<DirectedWeightedMultigraph<Node, LabeledLink>>();
+            SteinerTree steinerTree = new SteinerTree(
+                    new AsUndirectedGraph<Node, DefaultLink>(this.graphBuilder.getGraph()), Lists.newLinkedList(sn));
+            WeightedMultigraph<Node, DefaultLink> t = steinerTree.getDefaultSteinerTree();
+            TreePostProcess treePostProcess = new TreePostProcess(this.graphBuilder, t);
+            if (treePostProcess.getTree() != null) {
+                topKSteinerTrees.add(treePostProcess.getTree());
+            }
+        }
+
+        for (DirectedWeightedMultigraph<Node, LabeledLink> tree: topKSteinerTrees) {
+            if (tree != null) {
+                SemanticModel sm = new SemanticModel(new RandomGUID().toString(),
+                        tree,
+                        columnNodes,
+                        mappingToSourceColumns
+                );
+                SortableSemanticModel sortableSemanticModel =
+                        new SortableSemanticModel(sm, false);
+                sortableSemanticModels.add(sortableSemanticModel);
+            }
+        }
+
+        Collections.sort(sortableSemanticModels);
+        int count = Math.min(sortableSemanticModels.size(), modelingConfiguration.getNumCandidateMappings());
     }
 
-    private List<SemanticType> getCandidateSteinerSets(ColumnNode steinerNode, boolean useCorrectTypes, int numberOfCandidates) {
+    private List<SemanticType> getCandidateSteinerSets(ColumnNode steinerNode, boolean useCorrectTypes,
+                                                       int numberOfCandidates) {
 
         if (steinerNode == null) {
             return null;
@@ -168,7 +213,6 @@ public class DynamicUpdate_SemanticModels {
                 if (!this.graphBuilder.addLink(source, steinerNode, link)) {
                     continue;
                 }
-                ;
             } else {
                 for (Node source : nodesWithSameUriOfDomain) {
                     String linkId = LinkIdFactory.getLinkId(propertyUri, source.getId(), steinerNode.getId());
@@ -176,20 +220,10 @@ public class DynamicUpdate_SemanticModels {
                     if (!this.graphBuilder.addLink(source, steinerNode, link)) {
                         continue;
                     }
-                    ;
                 }
             }
 
         }
-    }
-
-    private static double roundDecimals(double d, int k) {
-        String format = "";
-        for (int i = 0; i < k; i++) {
-            format += "#";
-        }
-        DecimalFormat DForm = new DecimalFormat("#." + format);
-        return Double.valueOf(DForm.format(d));
     }
 
     @SuppressWarnings("unused")
@@ -209,7 +243,8 @@ public class DynamicUpdate_SemanticModels {
                     datanodeCount++;
                 }
             }
-            System.out.println(attributeCount + "\t" + nodeCount + "\t" + linkCount + "\t" + classNodeCount + "\t" + datanodeCount);
+            System.out.println(attributeCount + "\t" + nodeCount + "\t" + linkCount + "\t" + classNodeCount + "\t" +
+                    datanodeCount);
 
             List<ColumnNode> columnNodes = source.getColumnNodes();
             getStatistics2(columnNodes);
@@ -247,18 +282,17 @@ public class DynamicUpdate_SemanticModels {
 
         }
 
-        System.out.println(numberOfAttributesWhoseTypeIsInCRFTypes + "\t" + numberOfAttributesWhoseTypeIsFirstCRFType);
+        System.out.println(numberOfAttributesWhoseTypeIsInCRFTypes + "\t" +
+                numberOfAttributesWhoseTypeIsFirstCRFType);
     }
 
     public static Node cloneNode(Node v, SemanticModel currentModel, DynamicUpdate_SemanticModels modelLearner,
                                  DirectedWeightedMultigraph G) {
-        DirectedWeightedMultigraph currentGraph = currentModel.getGraph();
-
         String nodeId = modelLearner.nodeIdFactory.getNodeId(v.getUri());
         Node node = new InternalNode(nodeId, new Label(v.getUri()));
         G.addVertex(node);
 
-        HashSet<LabeledLink> templ = new HashSet<>();
+        HashSet<LabeledLink> tempL = new HashSet<>();
         Map<LabeledLink, Node> mp1 = new HashMap<>();
         Map<LabeledLink, Node> mp2 = new HashMap<>();
         ObjectPropertyType objectPropertyType = null;
@@ -273,14 +307,15 @@ public class DynamicUpdate_SemanticModels {
                 }
                 LabeledLink link = new ObjectPropertyLink(linkId, new Label(ol.getUri()), ol.getObjectPropertyType());
                 //G.addEdge(ol.getSource(),node, link);
-                templ.add(link);
+                tempL.add(link);
                 mp1.put(link, ol.getSource());
                 mp2.put(link, node);
-            } else if (dl.getType() != LinkType.CompactObjectPropertyLink && dl.getType() != LinkType.CompactSubClassLink) {
+            } else if (dl.getType() != LinkType.CompactObjectPropertyLink &&
+                    dl.getType() != LinkType.CompactSubClassLink) {
                 LabeledLink l = (LabeledLink) dl;
                 LabeledLink link = new ObjectPropertyLink(linkId, new Label(l.getUri()), objectPropertyType);
                 //G.addEdge(node,l.getTarget(), link);
-                templ.add(link);
+                tempL.add(link);
                 mp1.put(link, l.getSource());
                 mp2.put(link, node);
             }
@@ -292,15 +327,16 @@ public class DynamicUpdate_SemanticModels {
                 ObjectPropertyLink ol = (ObjectPropertyLink) dl;
                 LabeledLink link = new ObjectPropertyLink(linkId, new Label(ol.getUri()), ol.getObjectPropertyType());
                 //G.addEdge(node,ol.getTarget(), link);
-                templ.add(link);
+                tempL.add(link);
                 mp1.put(link, node);
                 mp2.put(link, ol.getTarget());
 
-            } else if (dl.getType() != LinkType.CompactObjectPropertyLink && dl.getType() != LinkType.CompactSubClassLink) {
+            } else if (dl.getType() != LinkType.CompactObjectPropertyLink &&
+                    dl.getType() != LinkType.CompactSubClassLink) {
                 LabeledLink l = (LabeledLink) dl;
                 LabeledLink link = new DataPropertyLink(linkId, new Label(l.getUri()));
                 //G.addEdge(node,l.getTarget(), link);
-                templ.add(link);
+                tempL.add(link);
                 mp1.put(link, node);
                 mp2.put(link, l.getTarget());
             }
@@ -320,7 +356,7 @@ public class DynamicUpdate_SemanticModels {
                 break;
             }
         }
-        for (LabeledLink l : templ) {
+        for (LabeledLink l : tempL) {
             G.addEdge(mp1.get(l), mp2.get(l), l);
         }
 
@@ -329,17 +365,21 @@ public class DynamicUpdate_SemanticModels {
     }
 
 
-    public static String[] test(int source, int target) throws Exception {
-        String result = "";
+    public static String[] test(int source, int target, int numberOfKnownModels, int numberOfCandidates,
+                                boolean useCorrectType) throws Exception {
+        StringBuilder result = new StringBuilder();
         ServletContextParameterMap contextParameters = ContextParametersRegistry.getInstance().getDefault();
         List<SemanticModel> semanticModels =
                 ModelReader.importSemanticModelsFromJsonFiles(Params.MODEL_DIR, Params.MODEL_MAIN_FILE_EXT);
-        contextParameters.setParameterValue(ServletContextParameterMap.ContextParameter.USER_CONFIG_DIRECTORY, Params.ROOT_DIR + "config\\");
+        contextParameters.setParameterValue(ServletContextParameterMap.ContextParameter.USER_CONFIG_DIRECTORY,
+                Params.ROOT_DIR + "config\\");
         List<SemanticModel> trainingData = new ArrayList<SemanticModel>();
+
 
         OntologyManager ontologyManager = new OntologyManager(contextParameters.getId());
         File ff = new File(Params.ONTOLOGY_DIR);
         File[] files = ff.listFiles();
+        assert files != null;
         for (File f : files) {
             ontologyManager.doImport(f, "UTF-8");
         }
@@ -347,24 +387,24 @@ public class DynamicUpdate_SemanticModels {
 
         ModelLearningGraph modelLearningGraph = null;
         DynamicUpdate_SemanticModels modelLearner;
-        boolean useCorrectType = true;
+        //boolean useCorrectType = true;
         boolean randomModel = false;
-        int numberOfCandidates = 4;
-        int numberOfKnownModels;
+        //int numberOfCandidates = 1;
+        //int numberOfKnownModels;
         String[] oneResult = {};
-        int i = source;
+        //The following is the code call for an update operation.
         {
-            int newSourceIndex = target;
-            SemanticModel newSource = semanticModels.get(newSourceIndex);
+            SemanticModel newSource = semanticModels.get(target);
             SemanticModel currentModel = semanticModels.get(source);
-            String dotresultDir = "D:\\Day_day_up\\Web-Karma-master-develop\\vagrant\\karma\\" + Params.DATASET_NAME + "\\results\\" + currentModel.getName() + "\\result_model_dot\\";
-            String jsonresultDir = "D:\\Day_day_up\\Web-Karma-master-develop\\vagrant\\karma\\" + Params.DATASET_NAME + "\\results\\" + currentModel.getName() + "\\result_model_json\\";
-            numberOfKnownModels = 28;
+            String dotResultDir = "D:\\Day_day_up\\Web-Karma-master-develop\\vagrant\\karma\\" +
+                    Params.DATASET_NAME + "\\results\\" + currentModel.getName() + "\\result_model_dot\\";
+            //String jsonResultDir = "D:\\Day_day_up\\Web-Karma-master-develop\\vagrant\\karma\\" +
+            // Params.DATASET_NAME + "\\results\\" + currentModel.getName() + "\\result_model_json\\";
             while (numberOfKnownModels <= semanticModels.size() - 1) {
                 trainingData.clear();
                 int j = 0, count = 0;
                 while (count < numberOfKnownModels) {
-                    if (j != newSourceIndex) {
+                    if (j != target) {
                         trainingData.add(semanticModels.get(j));
                         count++;
                     }
@@ -372,15 +412,15 @@ public class DynamicUpdate_SemanticModels {
                 }
 
                 modelLearningGraph = ModelLearningGraph.getEmptyInstance(ontologyManager, ModelLearningGraphType.Compact);
-                SemanticModel correctModel = newSource;
-                List<ColumnNode> columnNodes = correctModel.getColumnNodes();
+                List<ColumnNode> columnNodes = newSource.getColumnNodes();
 
-                List<Node> steinerNodes = new LinkedList<Node>(columnNodes);
+                List<Node> steinerNodes = new LinkedList<>(columnNodes);
                 modelLearner = new DynamicUpdate_SemanticModels(ontologyManager, steinerNodes);
                 //long start = System.currentTimeMillis();
 
                 if (randomModel) {
-                    modelLearner = new DynamicUpdate_SemanticModels(new GraphBuilder(ontologyManager, false), steinerNodes);
+                    modelLearner = new DynamicUpdate_SemanticModels(new GraphBuilder(ontologyManager,
+                            false), steinerNodes);
                 } else {
                     for (SemanticModel sm : trainingData) {
                         modelLearningGraph.addModelAndUpdate(sm, PatternWeightSystem.JWSPaperFormula);
@@ -390,8 +430,9 @@ public class DynamicUpdate_SemanticModels {
 
                     modelLearner.hypothesize(useCorrectType, numberOfCandidates);
                     DirectedWeightedMultigraph G = modelLearner.graphBuilder.getGraph();
-                    Request R = getRequestList(currentModel, correctModel, G);
-//                    String outName_G = Params.OUTPUT_DIR+ "Graph_G" + Params.GRAPHVIS_OUT_DETAILS_FILE_EXT;
+                    Request R = getRequestList(currentModel, newSource, G);
+//                    String outName_G = "D:\\Day_day_up\\Web-Karma-master-develop\\vagrant\\karma\\" +
+//                            Params.DATASET_NAME + "\\results\\"+ "Graph_G" + Params.GRAPHVIS_OUT_DETAILS_FILE_EXT;
 //                    GraphVizUtil.exportJGraphToGraphviz(
 //                            modelLearner.graphBuilder.getGraph(),
 //                            "Graph_G",
@@ -403,41 +444,42 @@ public class DynamicUpdate_SemanticModels {
 //                            outName_G
 //                    );
 
-                    Multimap<String, Node> requestList = R.getRequest_list();
-                    Collection removeList = requestList.get("remove");
-                    Collection addList = requestList.get("add");
+                    Multimap<String, ColumnNode> requestList = R.getRequest_list();
+                    List<ColumnNode> removeList = (List<ColumnNode>) requestList.get("remove");
+                    List<ColumnNode> addList = (List<ColumnNode>) requestList.get("add");
                     int modifyNum = ((removeList.size()) + (addList.size()));
-                    result += "modify num: " + modifyNum;
+                    result.append("modify num: ").append(modifyNum);
                     System.out.println("modify num: " + ((removeList.size()) + (addList.size())));
                     long start = System.currentTimeMillis();
 
-                    for (Object o : removeList) {
-                        Node n = (Node) o;
-                        update_remove(n, currentModel, G);
-                    }
+                    // update operation begin
+                    update4DroppingAttributes(removeList, currentModel, G);
 
-                    update4AddingAttributes(addList, currentModel, G, trainingData, modelLearner, numberOfCandidates, useCorrectType);
+                    update4AddingAttributes(addList, currentModel, G, trainingData,
+                            modelLearner, numberOfCandidates, useCorrectType);
 
                     modelCleaning(currentModel, G);
+
+                    //
                     long elapsedTimeMillis = System.currentTimeMillis() - start;
                     float elapsedTimeSec = elapsedTimeMillis / 1000F;
                     System.out.println("time: " + elapsedTimeSec);
 
-                    ModelEvaluation me = currentModel.evaluate(correctModel);
+                    ModelEvaluation me = currentModel.evaluate(newSource);
                     logger.info("To " + target + "precision: " + me.getPrecision() +
                             ", recall: " + me.getRecall() +
                             ", time: " + elapsedTimeSec);
 
-                    result += (", precision: " + me.getPrecision() +
-                            ", recall: " + me.getRecall() +
-                            ", time: " + elapsedTimeSec);
+                    result.append(", precision: ").append(me.getPrecision()).append(", recall: ").
+                            append(me.getRecall()).append(", time: ").append(elapsedTimeSec);
                     if (source != target) {
                         avePre += me.getPrecision();
                         aveRecall += me.getRecall();
                         double F1 = 2 * me.getPrecision() * me.getRecall() / (me.getPrecision() + me.getRecall());
                         aveF1 += F1;
 //                        String outputPath = Params.OUTPUT_DIR;
-//                        String outName = outputPath + semanticModels.get(newSourceIndex).getName() + Params.GRAPHVIS_OUT_DETAILS_FILE_EXT;
+//                        String outName = outputPath + semanticModels.get(newSourceIndex).getName() +
+//                        Params.GRAPHVIS_OUT_DETAILS_FILE_EXT;
 //                        GraphVizUtil.exportSemanticModelToGraphviz(
 //                            currentModel,
 //                            GraphVizLabelType.LocalId,
@@ -450,12 +492,16 @@ public class DynamicUpdate_SemanticModels {
                                 GraphVizLabelType.LocalId,
                                 GraphVizLabelType.LocalUri, false,
                                 false,
-                                dotresultDir + semanticModels.get(newSourceIndex).getName() + Params.GRAPHVIS_OUT_DETAILS_FILE_EXT
+                                dotResultDir + semanticModels.get(target).getName() +
+                                        Params.GRAPHVIS_OUT_DETAILS_FILE_EXT
                         );
-                        currentModel.writeJson(jsonresultDir + semanticModels.get(newSourceIndex).getName() + Params.GRAPH_JSON_FILE_EXT);
+                        //currentModel.writeJson(jsonResultDir + semanticModels.get(newSourceIndex).getName() +
+                        // Params.GRAPH_JSON_FILE_EXT);
 
-                        oneResult = new String[]{semanticModels.get(source).getName(), String.valueOf(modifyNum), String.valueOf(me.getPrecision()), String.valueOf(me.getRecall()), String.valueOf(F1)};
-                        //oneResult = new String[]{semanticModels.get(newSourceIndex).getName(), String.valueOf(modifyNum), String.valueOf(me.getPrecision()), String.valueOf(me.getRecall()), String.valueOf(elapsedTimeSec)};
+                        oneResult = new String[]{semanticModels.get(source).getName(),semanticModels.get(target).getName(), String.valueOf(modifyNum),
+                                String.valueOf(me.getPrecision()), String.valueOf(me.getRecall()), String.valueOf(F1)};
+                        //oneResult = new String[]{semanticModels.get(newSourceIndex).getName(), String.valueOf(modifyNum),
+                        // String.valueOf(me.getPrecision()), String.valueOf(me.getRecall()), String.valueOf(elapsedTimeSec)};
                     }
                 }
                 numberOfKnownModels++;
@@ -465,50 +511,62 @@ public class DynamicUpdate_SemanticModels {
     }
 
     public static void main(String[] args) throws Exception {
-        int sourceNum = 27;
+        //setup for one experiment
+        int sourceNum = 28;
+        int numberOfKnownModels = 28;
+        boolean useCorrectType = false;
+        int numberOfCandidates = 4;
         int source = 0;
         int not = source;
-        File wholePRResult = new File("D:\\Day_day_up\\Web-Karma-master-develop\\vagrant\\karma\\" + Params.DATASET_NAME + "\\results\\WholeResultPR.csv");
-        CSVWriter wholewriter = new CSVWriter(new FileWriter(wholePRResult));
-        String[] wholeheadArr = {"Target", "Precision", "Recall", "F1"};
-        wholewriter.writeNext(wholeheadArr);
-
-        for (; source <= sourceNum; source++) {
-            aveF1 = 0;
-            avePre = 0;
-            aveRecall = 0;
-            List<SemanticModel> semanticModels =
-                    ModelReader.importSemanticModelsFromJsonFiles(Params.MODEL_DIR, Params.MODEL_MAIN_FILE_EXT);
-            String prresultFileDir = "D:\\Day_day_up\\Web-Karma-master-develop\\vagrant\\karma\\" + Params.DATASET_NAME + "\\results\\" + semanticModels.get(source).getName() + "\\dynamic_result.csv";
-            String[] headArr = {"SourceDataSource", "ModifyAmount", "Precision", "Recall", "F1"};
-            File prfile = new File(prresultFileDir);
-            if (!prfile.exists()) {
-                prfile.createNewFile();
-            }
-            CSVWriter writer = new CSVWriter(new FileWriter(prfile));
-            writer.writeNext(headArr);
-
-            for (int i = 0; i <= sourceNum; i++) {
-                if (i != source) {
-                    writer.writeNext(test(i, source));
-                }
-            }
-            String[] ave = {" ", " ", String.valueOf(avePre / sourceNum), String.valueOf(aveRecall / sourceNum), String.valueOf(aveF1 / sourceNum)};
-            writer.writeNext(ave);
-            writer.flush();
-            String[] wholeResult = new String[]{semanticModels.get(source).getName(), String.valueOf(avePre / sourceNum), String.valueOf(aveRecall / sourceNum), String.valueOf(aveF1 / sourceNum)};
-            wholewriter.writeNext(wholeResult);
-            wholewriter.flush();
-
-            System.out.println("average precision: " + avePre / sourceNum + "  average recall: " + aveRecall / sourceNum + "  average F1:" + aveF1 / sourceNum);
-        }
-//        test(1, 7);
-////        int source = 2;
-////        for (int i = 0; i <= 28; i++) {
-////            if(i!=source){
-////                System.out.println(test(source, i));
-////            }
-////        }
+//        File wholePRResult = new File("D:\\Day_day_up\\Web-Karma-master-develop\\vagrant\\karma\\" +
+//                Params.DATASET_NAME + "\\results\\WholeResultPR.csv");
+//        CSVWriter wholeResultWriter = new CSVWriter(new FileWriter(wholePRResult));
+//        String[] wholeResultHeadArr = {"Target", "Precision", "Recall", "F1"};
+//        wholeResultWriter.writeNext(wholeResultHeadArr);
+//
+//        for (; source <= 8 ; source++) {
+//            aveF1 = 0;
+//            avePre = 0;
+//            aveRecall = 0;
+//            List<SemanticModel> semanticModels =
+//                    ModelReader.importSemanticModelsFromJsonFiles(Params.MODEL_DIR, Params.MODEL_MAIN_FILE_EXT);
+//            String prResultFileDir = "D:\\Day_day_up\\Web-Karma-master-develop\\vagrant\\karma\\" +
+//                    Params.DATASET_NAME + "\\results\\" + semanticModels.get(source).getName() + "\\dynamic_result.csv";
+//            String[] headArr = {"SourceDataSource", "TargetDataSource", "ModifyAmount", "Precision", "Recall", "F1"};
+//            File prFile = new File(prResultFileDir);
+//            if (!prFile.exists()) {
+//                prFile.createNewFile();
+//            }
+//            CSVWriter writer = new CSVWriter(new FileWriter(prFile));
+//            writer.writeNext(headArr);
+//
+//            for (int i = 0; i <= sourceNum; i++) {
+//                if (i != source) {
+//                    writer.writeNext(test(source, i, numberOfKnownModels, numberOfCandidates, useCorrectType));
+//                }
+//            }
+//            String[] ave = {" ", " ", String.valueOf(avePre / sourceNum),
+//                    String.valueOf(aveRecall / sourceNum),
+//                    String.valueOf(aveF1 / sourceNum)};
+//            writer.writeNext(ave);
+//            writer.flush();
+//            String[] wholeResult = new String[]{semanticModels.get(source).getName(),
+//                    String.valueOf(avePre / sourceNum),
+//                    String.valueOf(aveRecall / sourceNum),
+//                    String.valueOf(aveF1 / sourceNum)};
+//            wholeResultWriter.writeNext(wholeResult);
+//            wholeResultWriter.flush();
+//
+//            System.out.println("average precision: " + avePre / sourceNum + "  average recall: " +
+//                    aveRecall / sourceNum + "  average F1:" + aveF1 / sourceNum);
+//        }
+          test(0, 11, numberOfKnownModels, numberOfCandidates, useCorrectType);
+//        int source = 2;
+//        for (int i = 0; i <= 28; i++) {
+//            if(i!=source){
+//                System.out.println(test(source, i));
+//            }
+//        }
 
 
     }

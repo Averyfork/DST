@@ -1,5 +1,6 @@
 package edu.isi.karma.research.dynamic;
 
+
 import edu.isi.karma.modeling.alignment.LinkIdFactory;
 import edu.isi.karma.modeling.alignment.SemanticModel;
 import edu.isi.karma.rep.alignment.*;
@@ -7,21 +8,27 @@ import org.jgrapht.graph.DirectedWeightedMultigraph;
 
 import java.util.*;
 
-import static edu.isi.karma.research.dynamic.DynamicUpdateUtils.judgeRepeatable;
 import static edu.isi.karma.research.dynamic.DynamicUpdate_SemanticModels.cloneNode;
+import static edu.isi.karma.research.dynamic.SelectSemanticTypes.*;
 
+
+/**
+ * @author chl, wwm
+ */
 public class Update4AddingAttributes {
 
-    public static Node find_edge_without_label(Node inode, Node v, LabeledLink l,
-                                               SemanticModel currentModel,
-                                               DirectedWeightedMultigraph G) {
+    public static Node findEdgeWithoutLabel(Node inode, Node v, LabeledLink l,
+                                            SemanticModel currentModel,
+                                            DirectedWeightedMultigraph G) {
         DirectedWeightedMultigraph currentGraph = currentModel.getGraph();
         for (Object n : currentGraph.vertexSet()) {
             Node nn = (Node) n;
-            if (nn.getId() != inode.getId() && nn.getUri().equals(inode.getUri()) && nn.getId() != v.getId()) {
+            if (!Objects.equals(nn.getId(), inode.getId()) &&
+                    nn.getUri().equals(inode.getUri()) &&
+                    !Objects.equals(nn.getId(), v.getId())) {
                 int flag = 0;
                 for (Object l0 : currentGraph.edgesOf(nn)) {
-                    if (((LabeledLink) l0).getUri() == l.getUri()) {
+                    if (Objects.equals(((LabeledLink) l0).getUri(), l.getUri())) {
                         flag = 1;
                         break;
                     }
@@ -35,7 +42,7 @@ public class Update4AddingAttributes {
     }
 
     public static HashSet<LabeledLink> findAllEdges(Node n1, Node n2, DirectedWeightedMultigraph G) {
-        HashSet<LabeledLink> alledges = new HashSet<>();
+        HashSet<LabeledLink> allEdges = new HashSet<>();
 
         Map<Node, Integer> vis1 = new HashMap<>();
         Map<Node, Integer> vis2 = new HashMap<>();
@@ -46,9 +53,9 @@ public class Update4AddingAttributes {
         mainStack.push(n1);
         vis1.put(n1, 1);
         while (!mainStack.empty()) {
-            Node tpnode = mainStack.pop();
-            vis1.put(tpnode, 1);
-            Set<LabeledLink> nodeSet = G.edgesOf(tpnode);
+            Node tempNode = mainStack.pop();
+            vis1.put(tempNode, 1);
+            Set<LabeledLink> nodeSet = G.edgesOf(tempNode);
             for (LabeledLink l : nodeSet) {
                 if (!vis1.containsKey(l.getTarget())) {
                     vis1.put(l.getTarget(), 1);
@@ -69,15 +76,15 @@ public class Update4AddingAttributes {
         mainStack.push(n2);
         vis2.put(n2, 1);
         while (!mainStack.empty()) {
-            Node tpnode = mainStack.pop();
-            vis2.put(tpnode, 1);
-            Set<LabeledLink> nodeSet = G.edgesOf(tpnode);
+            Node tempNode = mainStack.pop();
+            vis2.put(tempNode, 1);
+            Set<LabeledLink> nodeSet = G.edgesOf(tempNode);
             for (LabeledLink l : nodeSet) {
                 if (!vis2.containsKey(l.getSource())) {
                     vis2.put(l.getSource(), 1);
                     mainStack.push(l.getSource());
                     if (mark1.containsKey(l) && !mark2.containsKey(l) && mark1.get(l) == 1) {
-                        alledges.add(l);
+                        allEdges.add(l);
                         mark2.put(l, 0);
                     }
                 }
@@ -85,7 +92,7 @@ public class Update4AddingAttributes {
                     vis2.put(l.getTarget(), 1);
                     mainStack.push(l.getTarget());
                     if (mark1.containsKey(l) && !mark2.containsKey(l) && mark1.get(l) == 0) {
-                        alledges.add(l);
+                        allEdges.add(l);
                         mark2.put(l, 1);
                     }
                 }
@@ -93,19 +100,19 @@ public class Update4AddingAttributes {
         }
 
 
-        return alledges;
+        return allEdges;
 
     }
 
-    public static <labeledlink> void update_add(Node u, SemanticModel currentModel, DirectedWeightedMultigraph G,
-                                                final List<SemanticModel> trainingData,
-                                                DynamicUpdate_SemanticModels modelLearner,
-                                                Map<String, String> extratSemanticTypes,
-                                                int numberOfCandidates) throws Exception {
+    public static void operation4AddingAtt(Node u, SemanticModel currentModel, DirectedWeightedMultigraph G,
+                                           final List<SemanticModel> trainingData,
+                                           DynamicUpdate_SemanticModels modelLearner,
+                                           Map<String, String> extractSemanticTypes,
+                                           int numberOfCandidates) throws Exception {
         HashSet<LabeledLink> temp_U = new HashSet<>();
         List<InternalNode> currentInternalNodes = new ArrayList<>(currentModel.getInternalNodes());
         DirectedWeightedMultigraph currentGraph = currentModel.getGraph();
-        String targetAttributeId = ((ColumnNode) u).getId();
+        String targetAttributeId = u.getId();
         Node v = null;
         LabeledLink ll = null;
         List<LabeledLink> eu = new ArrayList<>();
@@ -121,7 +128,7 @@ public class Update4AddingAttributes {
             if (teu.isEmpty()) {
                 return;
             }
-            String chosenClassNodeUri = extratSemanticTypes.get(targetAttributeId);
+            String chosenClassNodeUri = extractSemanticTypes.get(targetAttributeId);
             for (LabeledLink l : teu) {
                 if ((l.getSource().getUri() + l.getUri()).equals(chosenClassNodeUri)) {
                     eu.add(l);
@@ -132,7 +139,7 @@ public class Update4AddingAttributes {
         String linkedInternalNodeUri = eu.get(0).getSource().getUri();
         String linkUri = eu.get(0).getUri();
 
-        boolean isAllowRepeat = judgeRepeatable(linkedInternalNodeUri, linkUri, trainingData);
+        boolean isAllowRepeat = false;
         if (eu.size() == 1) {
 
             ll = eu.get(0);
@@ -142,16 +149,17 @@ public class Update4AddingAttributes {
                 if (currentGraph.containsVertex(v)) {
                     for (Object l : currentGraph.edgesOf(v)) {
                         LabeledLink tl = (LabeledLink) l;
-                        if (tl.getUri() == ll.getUri()) {
+                        if (Objects.equals(tl.getUri(), ll.getUri())) {
                             int mark = 0;
                             for (Object n : G.vertexSet()) {
                                 Node nn = (Node) n;
-                                if (nn.getId() != v.getId() && nn.getUri().equals(v.getUri())) {
+                                if (!Objects.equals(nn.getId(), v.getId()) &&
+                                        nn.getUri().equals(v.getUri())) {
 
                                     int flag = 0;
                                     if (currentGraph.containsVertex(nn)) {
                                         for (Object l0 : currentGraph.edgesOf(nn)) {
-                                            if (((LabeledLink) l0).getUri() == ll.getUri()) {
+                                            if (Objects.equals(((LabeledLink) l0).getUri(), ll.getUri())) {
                                                 flag = 1;
                                                 break;
                                             }
@@ -186,7 +194,7 @@ public class Update4AddingAttributes {
         } else if (eu.size() > 1) {
 
             final String targetNodeName = ((ColumnNode) u).getColumnName().toLowerCase();
-            Collections.sort(eu, new Comparator() {
+            eu.sort(new Comparator() {
                 @Override
                 public int compare(Object o1, Object o2) {
 
@@ -194,14 +202,14 @@ public class Update4AddingAttributes {
                     String s2 = ((LabeledLink) o2).getSource().getId();
                     int coherence1 = 0;
                     int coherence2 = 0;
+                    coherence1 = ((LabeledLink) o1).getSource().getModelIds().size();
+                    coherence2 = ((LabeledLink) o2).getSource().getModelIds().size();
                     if (coherence1 == 0 && coherence2 == 0) {
-                        coherence1 = ((LabeledLink) o1).getSource().getModelIds().size();
-                        coherence2 = ((LabeledLink) o2).getSource().getModelIds().size();
-                    }
-                    if (coherence1 == 0 && coherence2 == 0) {
-                        //前面modelid从大到小，但是判断不出来的时候，直接看标号则是从小到大，因此我们取负数
-                        coherence1 = (int) (((LabeledLink) o1).getSource().getId().charAt(((LabeledLink) o1).getSource().getId().length() - 1)) - (int) ('0');
-                        coherence2 = (int) (((LabeledLink) o2).getSource().getId().charAt(((LabeledLink) o2).getSource().getId().length() - 1)) - (int) ('0');
+                        //前面modelId从大到小，但是判断不出来的时候，直接看标号则是从小到大，因此我们取负数
+                        coherence1 = (int) (((LabeledLink) o1).getSource().getId().charAt(((LabeledLink) o1).
+                                getSource().getId().length() - 1)) - (int) ('0');
+                        coherence2 = (int) (((LabeledLink) o2).getSource().getId().charAt(((LabeledLink) o2).
+                                getSource().getId().length() - 1)) - (int) ('0');
                         coherence1 *= (-1);
                         coherence2 *= (-1);
                     }
@@ -235,9 +243,7 @@ public class Update4AddingAttributes {
                                 }
                             }
                         }
-                        if (isHaveLink) {
-                            continue;
-                        } else {
+                        if (!isHaveLink) {
                             isInternalNodeEnough = true;
                             ll = l;
                             v = l.getSource();
@@ -265,16 +271,15 @@ public class Update4AddingAttributes {
                         if (sourceNode != null) {
                             for (LabeledLink currentNodeLink : currentModel.getGraph().outgoingEdgesOf(sourceNode)) {
                                 if (currentNodeLink instanceof DataPropertyLink) {
-                                    String ss = currentNodeLink.getUri() + ((ColumnNode) currentNodeLink.getTarget()).getColumnName();
+                                    String ss = currentNodeLink.getUri() + ((ColumnNode) currentNodeLink.getTarget()).
+                                            getColumnName();
                                     if (ss.equals(s)) {
                                         isHaveLink = true;
                                         break;
                                     }
                                 }
                             }
-                            if (isHaveLink) {
-                                continue;
-                            } else {
+                            if (!isHaveLink) {
                                 isInternalNodeEnough = true;
                                 ll = l;
                                 v = l.getSource();
@@ -290,21 +295,21 @@ public class Update4AddingAttributes {
                 }
                 if (!isInternalNodeEnough) {
                     List<String> sameIdFromG = new ArrayList<>();
-                    for (LabeledLink eull : eu) {
-                        sameIdFromG.add(eull.getSource().getId());
+                    for (LabeledLink euLabeledLink : eu) {
+                        sameIdFromG.add(euLabeledLink.getSource().getId());
                     }
                     for (InternalNode in : currentInternalNodes) {
                         if (in.getUri().equals(linkedInternalNodeUri)) {
                             if (!sameIdFromG.contains(in.getId())) {
-                                boolean isavailable = true;
+                                boolean isAvailable = true;
                                 for (Object ino : currentGraph.outgoingEdgesOf(in)) {
-                                    LabeledLink inll = (LabeledLink) ino;
-                                    if (inll.getUri().equals(linkUri)) {
-                                        isavailable = false;
+                                    LabeledLink inLabeledLink = (LabeledLink) ino;
+                                    if (inLabeledLink.getUri().equals(linkUri)) {
+                                        isAvailable = false;
                                         break;
                                     }
                                 }
-                                if (isavailable) {
+                                if (isAvailable) {
                                     isInternalNodeEnough = true;
                                     v = in;
                                     String linkId = LinkIdFactory.getLinkId(linkUri, v.getId(), u.getId());
@@ -327,7 +332,9 @@ public class Update4AddingAttributes {
             currentGraph.addVertex(v);
             Set<DefaultLink> e = G.edgesOf(v);
             for (DefaultLink l : e) {
-                if ((currentGraph.containsVertex(l.getSource()) && currentGraph.containsVertex(l.getTarget())) && l.getType() == LinkType.ObjectPropertyLink) {
+                if ((currentGraph.containsVertex(l.getSource()) &&
+                        currentGraph.containsVertex(l.getTarget())) &&
+                        l.getType() == LinkType.ObjectPropertyLink) {
                     temp_U.add((LabeledLink) l);
                 }
             }
@@ -335,8 +342,8 @@ public class Update4AddingAttributes {
                 currentGraph.removeVertex(v);
                 HashMap<Node, Integer> vis = new HashMap<Node, Integer>();
                 HashMap<Node, Double> dis = new HashMap<Node, Double>();
-                HashMap<Node, LabeledLink> prelink = new HashMap<Node, LabeledLink>();
-                HashMap<Node, Node> prenode = new HashMap<Node, Node>();
+                HashMap<Node, LabeledLink> preLink = new HashMap<Node, LabeledLink>();
+                HashMap<Node, Node> preNode = new HashMap<Node, Node>();
                 class Edge implements Comparable<Edge> {
                     int w;
                     Node to;
@@ -370,7 +377,7 @@ public class Update4AddingAttributes {
                     vis.put(to, 1);
                     if (currentModel.getGraph().vertexSet().contains(to)) {
                         Node inode = to;
-                        LabeledLink minEdge = prelink.get(to);
+                        LabeledLink minEdge = preLink.get(to);
                         boolean has_same_label = false;
                         for (Object l : currentGraph.edgesOf(inode)) {
                             if (((LabeledLink) l).getUri().equals(minEdge.getUri())) {
@@ -379,43 +386,49 @@ public class Update4AddingAttributes {
                             }
                         }
                         if (has_same_label) {
-                            Node tempn = find_edge_without_label(inode, prenode.get(to), minEdge, currentModel, G);
-                            if (tempn != null) {
-                                inode = tempn;
-                                String linkId = LinkIdFactory.getLinkId(minEdge.getUri(), inode.getId(), prenode.get(to).getId());
+                            Node tempNode = findEdgeWithoutLabel(inode, preNode.get(to), minEdge, currentModel, G);
+                            if (tempNode != null) {
+                                inode = tempNode;
+                                String linkId = LinkIdFactory.getLinkId(minEdge.getUri(), inode.getId(),
+                                        preNode.get(to).getId());
                                 LabeledLink link = new DataPropertyLink(linkId, new Label(minEdge.getUri()));
-                                G.addEdge(inode, prenode.get(to), link);
-                                prelink.put(inode, link);
-                                prenode.put(inode, prenode.get(to));
+                                G.addEdge(inode, preNode.get(to), link);
+                                preLink.put(inode, link);
+                                preNode.put(inode, preNode.get(to));
                             }
                         }
                         to = inode;
                         while (to != v) {
-                            currentGraph.addVertex(prenode.get(to));
-                            currentGraph.addEdge(prelink.get(to).getSource(), prelink.get(to).getTarget(), prelink.get(to));
-                            to = prenode.get(to);
+                            currentGraph.addVertex(preNode.get(to));
+                            currentGraph.addEdge(preLink.get(to).getSource(), preLink.get(to).getTarget(), preLink.get(to));
+                            to = preNode.get(to);
                         }
                         break;
                     }
                     for (Object l : G.edgesOf(to)) {
                         DefaultLink dl = (DefaultLink) l;
-                        LabeledLink tl = null;
-                        if (dl.getType() != LinkType.CompactObjectPropertyLink && dl.getType() != LinkType.CompactSubClassLink) {
+                        LabeledLink tl;
+                        if (dl.getType() != LinkType.CompactObjectPropertyLink &&
+                                dl.getType() != LinkType.CompactSubClassLink) {
                             tl = (LabeledLink) dl;
                         } else {
                             continue;
                         }
-                        if (!vis.containsKey(tl.getTarget()) && (!dis.containsKey(tl.getTarget()) || dis.get(tl.getTarget()) > d + tl.getWeight() + 10000) && !G.outgoingEdgesOf(tl.getTarget()).isEmpty()) {
+                        if (!vis.containsKey(tl.getTarget()) && (!dis.containsKey(tl.getTarget()) ||
+                                dis.get(tl.getTarget()) > d + tl.getWeight() + 10000) &&
+                                !G.outgoingEdgesOf(tl.getTarget()).isEmpty()) {
                             dis.put(tl.getTarget(), d + tl.getWeight() + 10000);
                             pq.add(new Edge(tl.getTarget(), (int) (d + tl.getWeight() + 10000)));
-                            prenode.put(tl.getTarget(), to);
-                            prelink.put(tl.getTarget(), tl);
+                            preNode.put(tl.getTarget(), to);
+                            preLink.put(tl.getTarget(), tl);
                         }
-                        if (!vis.containsKey(tl.getSource()) && (!dis.containsKey(tl.getSource()) || dis.get(tl.getSource()) > d + tl.getWeight() + 10000) && !G.outgoingEdgesOf(tl.getSource()).isEmpty()) {
+                        if (!vis.containsKey(tl.getSource()) && (!dis.containsKey(tl.getSource()) ||
+                                dis.get(tl.getSource()) > d + tl.getWeight() + 10000) &&
+                                !G.outgoingEdgesOf(tl.getSource()).isEmpty()) {
                             dis.put(tl.getSource(), d + tl.getWeight() + 10000);
                             pq.add(new Edge(tl.getSource(), (int) (d + tl.getWeight() + 10000)));
-                            prenode.put(tl.getSource(), to);
-                            prelink.put(tl.getSource(), tl);
+                            preNode.put(tl.getSource(), to);
+                            preLink.put(tl.getSource(), tl);
                         }
                     }
                 }
@@ -426,17 +439,19 @@ public class Update4AddingAttributes {
             }
             if (!temp_U.isEmpty()) {
                 List<LabeledLink> U = new ArrayList<LabeledLink>(temp_U);
-                Collections.sort(U, new Comparator() {
+                U.sort(new Comparator() {
 
                     @Override
                     public int compare(Object o1, Object o2) {
-                        int coherence1 = 0;
-                        int coherence2 = 0;
+                        int coherence1;
+                        int coherence2;
                         coherence1 = ((LabeledLink) o1).getSource().getModelIds().size();
                         coherence2 = ((LabeledLink) o2).getSource().getModelIds().size();
                         if (coherence1 == coherence2) {
-                            coherence1 = (int) (((LabeledLink) o1).getSource().getId().charAt(((LabeledLink) o1).getSource().getId().length() - 1)) - (int) ('0');
-                            coherence2 = (int) (((LabeledLink) o2).getSource().getId().charAt(((LabeledLink) o2).getSource().getId().length() - 1)) - (int) ('0');
+                            coherence1 = (int) (((LabeledLink) o1).getSource().getId().charAt(((LabeledLink) o1).
+                                    getSource().getId().length() - 1)) - (int) ('0');
+                            coherence2 = (int) (((LabeledLink) o2).getSource().getId().charAt(((LabeledLink) o2).
+                                    getSource().getId().length() - 1)) - (int) ('0');
                             coherence1 *= (-1);
                             coherence2 *= (-1);
                         }
@@ -449,9 +464,9 @@ public class Update4AddingAttributes {
                 });
 
                 int chosenIn = 0;
-                Node inode = null;
+                Node inode;
                 LabeledLink minEdge = U.get(chosenIn);
-                boolean isfind = false;
+                boolean isFind = false;
                 for (; chosenIn < U.size(); chosenIn++) {
                     minEdge = U.get(chosenIn);
                     boolean has_same_label = false;
@@ -468,22 +483,20 @@ public class Update4AddingAttributes {
                     }
                     if (!has_same_label) {
                         currentGraph.addEdge(minEdge.getSource(), minEdge.getTarget(), minEdge);
-                        isfind = true;
+                        isFind = true;
                         break;
-                    } else {
-                        continue;
                     }
                 }
-                if (!isfind) {
+                if (!isFind) {
                     currentGraph.addEdge(U.get(0).getSource(), U.get(0).getTarget(), U.get(0));
                 }
                 for (int i = chosenIn; i < U.size(); i++) {
                     minEdge = U.get(i);
                     Node sourceNode = minEdge.getSource();
                     Node targetNode = minEdge.getTarget();
-                    HashSet<LabeledLink> alledges = findAllEdges(sourceNode, targetNode, currentGraph);
-                    if (!alledges.isEmpty()) {
-                        List<LabeledLink> E = new ArrayList<LabeledLink>(alledges);
+                    HashSet<LabeledLink> allEdges = findAllEdges(sourceNode, targetNode, currentGraph);
+                    if (!allEdges.isEmpty()) {
+                        List<LabeledLink> E = new ArrayList<LabeledLink>(allEdges);
                         LabeledLink maxWeightEdge = E.get(0);
                         for (LabeledLink l : E) {
                             if (l.getWeight() > maxWeightEdge.getWeight()) {
@@ -504,162 +517,49 @@ public class Update4AddingAttributes {
         currentGraph.addEdge(v, u, ll);
     }
 
-    public static Map<String, String> getSemanticTypes(Collection addList, SemanticModel currentModel,
-                                                       DirectedWeightedMultigraph G,
-                                                       final List<SemanticModel> trainingData,
-                                                       int k) {
-        Map<String, String> resultMap = new HashMap<>();
-        //开始对数据集中的每个语义模型出现次数进行计算
-        final HashMap<String, Integer> trainingModelFrequency = new HashMap<String, Integer>();
-        List<String> remainedEdgeFromCurrentModel = new ArrayList<String>();
-        for (SemanticModel sm : trainingData) {
-            trainingModelFrequency.put(sm.getId(), 0);
-        }
-        for (Object o : currentModel.getGraph().edgeSet()) {
-            LabeledLink l = (LabeledLink) o;
-            Node tar = l.getTarget();
-            if (tar instanceof ColumnNode) {
-                remainedEdgeFromCurrentModel.add(l.getSource().getId() + l.getUri() + ((ColumnNode) l.getTarget()).getColumnName());
-            } else {
-                remainedEdgeFromCurrentModel.add(l.getSource().getId() + l.getUri() + (l.getTarget()).getId());
-            }
-        }
-        String currentModelId = currentModel.getId();
-        for (Object o : G.edgeSet()) {
-            DefaultLink dl = (DefaultLink) o;
-            LabeledLink l = null;
-            if (dl.getType() != LinkType.CompactObjectPropertyLink && dl.getType() != LinkType.CompactSubClassLink) {
-                l = (LabeledLink) dl;
-            } else {
-                continue;
-            }
-            String judges = null;
-            if (l.getTarget() instanceof ColumnNode) {
-                judges = (l.getSource().getId() + l.getUri() + ((ColumnNode) l.getTarget()).getColumnName());
-            } else {
-                judges = (l.getSource().getId() + l.getUri() + (l.getTarget()).getId());
-            }
-            if (l.getModelIds().contains(currentModelId) && remainedEdgeFromCurrentModel.contains(judges)) {
-                //如果包含currentModelId，并且这条边没有被删除，说明这条边是currentModel中的边
-                for (String s : l.getModelIds()) {
-                    int temp = trainingModelFrequency.get(s) + 1;
-                    trainingModelFrequency.put(s, temp);
-                }
-            }
-        }
-        HashMap<String, Double> typeconfidence = new HashMap();
-        //准备完后，开始进行所有属性semantictype的判定，依据coherence（权值都是100）
-        //首先将所有属性的所有type加入一个列表，分别求出其modelid，以此为依据分配权重。
-        Map<LabeledLink, List<String>> allSemanticTypes = new HashMap<>();
-        for (Object o : addList) {
-            ColumnNode n = (ColumnNode) o;
-            List<SemanticType> ntypes = n.getTopKLearnedSemanticTypes(k);
-            List<String> existedOntology = new ArrayList<String>();
-            //用于筛除掉同source node是URI不同ID的边，如type1和type2，只需要考虑其中一个即可
-            for (Object lo : G.incomingEdgesOf(n)) {
-                LabeledLink l = (LabeledLink) lo;
-                if (!existedOntology.contains(l.getSource().getUri())) {
-                    existedOntology.add(l.getSource().getUri());
-                    List<String> idList = new ArrayList<String>();
-                    allSemanticTypes.put(l, idList);
-                }
 
-            }
-            for (SemanticType ntype : ntypes) {
-                typeconfidence.put(ntype.getModelLabelString() + ntype.getHNodeId(), ntype.getConfidenceScore() * 15);
-            }
+    public static List<HashMap<String, String>> addingAmbiguousNodes(SemanticModel currentModel,
+                                                                     HashSet<ColumnNode> ambiguousNodes) {
+        //根据启发式信息对不确定type的点进行判断，挑选出某个组合
+        List<HashMap<String, String>> resultMapList = new ArrayList<>();
+        for (ColumnNode cn : ambiguousNodes) {
+            List<SemanticType> semanticTypes4CN = cn.getTopKLearnedSemanticTypes(4);
         }
-        for (Map.Entry<LabeledLink, List<String>> me : allSemanticTypes.entrySet()) {
-            LabeledLink key = me.getKey();
-            List<String> values = me.getValue();
-            String targetNodeName = ((ColumnNode) key.getTarget()).getColumnName().toLowerCase().replaceAll("\\s*", "").replaceAll("_", "");
-            String linkUri = key.getUri();
-            String sourceUri = key.getSource().getUri();
-            for (SemanticModel sm : trainingData) {
-                for (ColumnNode cn : sm.getColumnNodes()) {
-                    String tempTNN = cn.getColumnName().toLowerCase().replaceAll("\\s*", "").replaceAll("_", "");
-                    if (targetNodeName.contains(tempTNN) || tempTNN.contains(targetNodeName)) {
-                        //说明此时sm中的cn和进行判断的属性是同一属性,cn有且仅有一条边，看这条边的semantictype是否是我们目前判断的semantictype
-                        List<LabeledLink> cnLinks = new ArrayList<LabeledLink>(sm.getGraph().edgesOf(cn));
-                        if (cnLinks.get(0).getUri().equals(linkUri) && cnLinks.get(0).getSource().getUri().equals(sourceUri)) {
-                            values.add(sm.getId());
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        List<Map.Entry<LabeledLink, List<String>>> entryList = new LinkedList<>(allSemanticTypes.entrySet());
-        int sortPoint = 0;
-        int threedivpoint = entryList.size() / 3;
-        Collections.sort(entryList, new Comparator<Object>() {
-            @Override
-            public int compare(Object o1, Object o2) {
-                Map.Entry e1 = (Map.Entry<LabeledLink, List<String>>) o1;
-                Map.Entry e2 = (Map.Entry<LabeledLink, List<String>>) o2;
-                String e1type = ((LabeledLink) e1.getKey()).getSource().getUri() + "|" + ((LabeledLink) e1.getKey()).getUri() + ((LabeledLink) e1.getKey()).getTarget().getId();
-                String e2type = ((LabeledLink) e2.getKey()).getSource().getUri() + "|" + ((LabeledLink) e2.getKey()).getUri() + ((LabeledLink) e2.getKey()).getTarget().getId();
-                double cost1 = 0, cost2 = 0;
-                int coherence1 = 0, coherence2 = 0;
-                List<String> modelId1 = (List<String>) e1.getValue();
-                List<String> modelId2 = (List<String>) e2.getValue();
-                for (String s : modelId1) {
-                    coherence1 += trainingModelFrequency.get(s);
-                }
-                for (String s : modelId2) {
-                    coherence2 += trainingModelFrequency.get(s);
-                }
-                if (coherence1 == 0 && coherence2 == 0) {
-                    coherence1 = modelId1.size();
-                    coherence2 = modelId2.size();
-                }
-                cost1 = coherence1 + typeconfidence.get(e1type);
-                cost2 = coherence2 + typeconfidence.get(e2type);
-                if (cost1 != cost2) {
-                    return cost1 < cost2 ? 1 : -1;
-                } else {
-                    return 0;
-                }
-            }
-        });
-        for (Map.Entry<LabeledLink, List<String>> me : entryList) {
-            LabeledLink l = me.getKey();
-            List<String> curModelIds = me.getValue();
-            ColumnNode curCoNode = (ColumnNode) l.getTarget();
-            InternalNode curInNode = (InternalNode) l.getSource();
-            if (!resultMap.containsKey(curCoNode.getLocalId())) {
-                resultMap.put(curCoNode.getLocalId(), curInNode.getUri() + l.getUri());
-                //此时更新语义模型频率
-                {
-                    for (String id : curModelIds) {
-                        int temp = trainingModelFrequency.get(id) + 1;
-                        trainingModelFrequency.put(id, temp);
-                    }
-                }
-            }
-        }
-        return resultMap;
+        return resultMapList;
     }
 
-    public static void update4AddingAttributes(Collection addList, SemanticModel currentModel,
+
+    public static void update4AddingAttributes(List<ColumnNode> addList, SemanticModel currentModel,
                                                DirectedWeightedMultigraph G,
                                                final List<SemanticModel> trainingData,
                                                DynamicUpdate_SemanticModels modelLearner,
                                                int numberOfCandidates,
                                                boolean useCorrectType) {
-        Map<String, String> extratSemanticTypes = new HashMap<>();
-        if (numberOfCandidates == 1) {
-            extratSemanticTypes = new HashMap<>();
-        } else if (numberOfCandidates == 4) {
-            extratSemanticTypes = getSemanticTypes(addList, currentModel, G, trainingData, numberOfCandidates);
+        HashMap<String, String> certainedSemanticTypes = new HashMap<>();
+        HashMap<String, String> uncertainedSemanticTypes = new HashMap<>();
+        HashSet<ColumnNode> ambiguousNodes = new HashSet<>();
+        if (!useCorrectType) {
+            if (numberOfCandidates == 1) {
+
+            } else if (numberOfCandidates > 1) {
+//                SelectSemanticTypes sst = getSemanticTypes1(addList, currentModel, G, trainingData, numberOfCandidates,
+//                        certainedSemanticTypes);
+                certainedSemanticTypes = getSemanticTypes(addList, currentModel, G, trainingData, numberOfCandidates);
+            }
         }
         for (Object o : addList) {
-            Node n = (Node) o;
+            ColumnNode n = (ColumnNode) o;
             try {
-                update_add(n, currentModel, G, trainingData, modelLearner, extratSemanticTypes, numberOfCandidates);
+                if (!ambiguousNodes.contains(n)) {
+                    operation4AddingAtt(n, currentModel, G, trainingData, modelLearner, certainedSemanticTypes, numberOfCandidates);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+        if (!ambiguousNodes.isEmpty()) {
+            List<HashMap<String, String>> semanticTypesCombinations = new ArrayList<>();
+
         }
     }
 }

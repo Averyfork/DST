@@ -12,34 +12,42 @@ import org.jgrapht.graph.DirectedWeightedMultigraph;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @author chl
+ */
 public class Request {
 
 
-    private final Multimap<String, Node> request_list;
+    private final Multimap<String, ColumnNode> request_list;
 
-    Request(Multimap<String, Node> R) {
+    Request(Multimap<String, ColumnNode> R) {
         request_list = R;
     }
 
-    public Multimap<String, Node> getRequest_list() {
+    public Multimap<String, ColumnNode> getRequest_list() {
         return this.request_list;
     }
 
 
     public static Request getRequestList(SemanticModel currentModel, SemanticModel correctModel,
                                          DirectedWeightedMultigraph G) {
-        Multimap<String, Node> example = ArrayListMultimap.create();
-        List<String> currentNodeName = new ArrayList<String>();
-        List<String> correctNodeName = new ArrayList<String>();
+        Multimap<String, ColumnNode> example = ArrayListMultimap.create();
+        List<String> currentNodeName = new ArrayList<>();
+        List<String> correctNodeName = new ArrayList<>();
         for (ColumnNode cn : currentModel.getColumnNodes()) {
             for (ColumnNode cng : correctModel.getColumnNodes()) {
-                String s1 = cn.getColumnName().toLowerCase().replaceAll("\\s*", "").replaceAll("_", "");
-                String s2 = cng.getColumnName().toLowerCase().replaceAll("\\s*", "").replaceAll("_", "");
+                String s1 = cn.getColumnName().toLowerCase().replaceAll("\\s*", "").
+                        replaceAll("_", "");
+                String s2 = cng.getColumnName().toLowerCase().replaceAll("\\s*", "").
+                        replaceAll("_", "");
                 if (s1.contains(s2) || s2.contains(s1)) {
-                    List<LabeledLink> cnll = new ArrayList<>(currentModel.getGraph().incomingEdgesOf(cn));
-                    List<LabeledLink> cngll = new ArrayList<>(correctModel.getGraph().incomingEdgesOf(cng));
-                    Node linkedInternalNodecn = cnll.get(0).getSource();
-                    if (cnll.get(0).getUri().equals(cngll.get(0).getUri()) && linkedInternalNodecn.getUri().equals(cngll.get(0).getSource().getUri())) {
+                    List<LabeledLink> cnLabeledLink = new ArrayList<>
+                            (currentModel.getGraph().incomingEdgesOf(cn));
+                    List<LabeledLink> cnGLabeledLink = new ArrayList<>
+                            (correctModel.getGraph().incomingEdgesOf(cng));
+                    Node cnLinkedInternalNode = cnLabeledLink.get(0).getSource();
+                    if (cnLabeledLink.get(0).getUri().equals(cnGLabeledLink.get(0).getUri()) && cnLinkedInternalNode.getUri().
+                            equals(cnGLabeledLink.get(0).getSource().getUri())) {
                         currentModel.getGraph().removeVertex(cn);
                         currentModel.getColumnNodes().remove(cn);
                         currentModel.getMappingToSourceColumns().remove(cn);
@@ -47,7 +55,7 @@ public class Request {
                         currentModel.getColumnNodes().add(cng);
                         currentModel.getMappingToSourceColumns().put(cng, cng);
                         if (currentModel.getGraph().edgesOf(cng).isEmpty()) {
-                            currentModel.getGraph().addEdge(linkedInternalNodecn, cng, cnll.get(0));
+                            currentModel.getGraph().addEdge(cnLinkedInternalNode, cng, cnLabeledLink.get(0));
                         }
                         break;
                     }
@@ -70,12 +78,16 @@ public class Request {
         for (Node n : correctModel.getGraph().vertexSet()) {
             if (n.getType() == NodeType.ColumnNode) {
                 ColumnNode cn = (ColumnNode) n;
-                if (!currentNodeName.contains(cn.getUserSemanticTypes().get(0).getModelLabelString() + cn.getColumnName())) {
+                if (!currentNodeName.contains(cn.getUserSemanticTypes().get(0).
+                        getModelLabelString() + cn.getColumnName())) {
                     for (Object go : G.vertexSet()) {
-                        Node gn = (Node) go;
-                        if (gn.getId().equals(n.getId())) {
-                            example.put("add", gn);
+                        if(((Node)go).getType() == NodeType.ColumnNode){
+                            ColumnNode gn = (ColumnNode) go;
+                            if (gn.getId().equals(n.getId())) {
+                                example.put("add", gn);
+                            }
                         }
+
                     }
                 }
             }
@@ -83,12 +95,12 @@ public class Request {
         for (Node n : currentModel.getGraph().vertexSet()) {
             if (n.getType() == NodeType.ColumnNode) {
                 ColumnNode cn = (ColumnNode) n;
-                if (!correctNodeName.contains(cn.getUserSemanticTypes().get(0).getModelLabelString() + cn.getColumnName())) {
-                    example.put("remove", n);
+                if (!correctNodeName.contains(cn.getUserSemanticTypes().get(0).
+                        getModelLabelString() + cn.getColumnName())) {
+                    example.put("remove", cn);
                 }
             }
         }
-        Request R = new Request(example);
-        return R;
+        return new Request(example);
     }
 }

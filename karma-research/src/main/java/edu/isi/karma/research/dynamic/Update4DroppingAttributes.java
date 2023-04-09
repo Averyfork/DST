@@ -4,11 +4,13 @@ import edu.isi.karma.modeling.alignment.SemanticModel;
 import edu.isi.karma.rep.alignment.*;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static edu.isi.karma.research.dynamic.Update4AddingAttributes.findAllEdges;
 
+/**
+ * @author chl
+ */
 public class Update4DroppingAttributes {
     public static void recursionSemanticRemove(Node v, SemanticModel currentModel) {
         List<LabeledLink> temp = new ArrayList<>(currentModel.getGraph().incomingEdgesOf(v));
@@ -22,21 +24,20 @@ public class Update4DroppingAttributes {
         }
 
         currentModel.getGraph().removeVertex(v);
-        List<LabeledLink> eOut = new ArrayList<>(currentModel.getGraph().outgoingEdgesOf(linkedInternalNode));
+        List<LabeledLink> eOut = new ArrayList<>(currentModel.getGraph().
+                outgoingEdgesOf(linkedInternalNode));
 
         int trueDegree = eOut.size();
-
         if (trueDegree == 0) {
             recursionSemanticRemove(linkedInternalNode, currentModel);
-        } else {
-            return;
         }
     }
 
 
-    public static void update_remove(Node n, SemanticModel currentModel, DirectedWeightedMultigraph G) throws Exception {
+    public static void operation4DroppingAtt(Node n, SemanticModel currentModel,
+                                             DirectedWeightedMultigraph G) {
 
-        List<LabeledLink> temp = new ArrayList<LabeledLink>(currentModel.getGraph().incomingEdgesOf(n));
+        List<LabeledLink> temp = new ArrayList<>(currentModel.getGraph().incomingEdgesOf(n));
         Node linkedInternalNode = null;
         if (!temp.isEmpty()) {
             linkedInternalNode = temp.get(0).getSource();
@@ -53,7 +54,7 @@ public class Update4DroppingAttributes {
         List<LabeledLink> eOut = new ArrayList<>(currentGraph.outgoingEdgesOf(linkedInternalNode));
         int trueDegree = 0;
 
-        for (LabeledLink l : eOut) {
+        for (LabeledLink ignored : eOut) {
             trueDegree++;
         }
         if (trueDegree == 0) {
@@ -77,8 +78,9 @@ public class Update4DroppingAttributes {
                 }
                 for (Object o : G.incomingEdgesOf(outNode)) {
                     DefaultLink dl = (DefaultLink) o;
-                    LabeledLink l = null;
-                    if (dl.getType() != LinkType.CompactObjectPropertyLink && dl.getType() != LinkType.CompactSubClassLink) {
+                    LabeledLink l;
+                    if (dl.getType() != LinkType.CompactObjectPropertyLink &&
+                            dl.getType() != LinkType.CompactSubClassLink) {
                         l = (LabeledLink) o;
                     } else {
                         continue;
@@ -114,6 +116,18 @@ public class Update4DroppingAttributes {
 
         } else if (trueDegree >= 2) {
             return;
+        }
+    }
+
+    public static void update4DroppingAttributes(Collection removeList, SemanticModel currentModel,
+                                                 DirectedWeightedMultigraph G) {
+        for (Object o : removeList) {
+            Node n = (Node) o;
+            try {
+                operation4DroppingAtt(n, currentModel, G);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }

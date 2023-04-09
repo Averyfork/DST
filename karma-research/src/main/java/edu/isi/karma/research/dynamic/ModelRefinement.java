@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
+/**
+ * @author chl
+ */
 public class ModelRefinement {
 
     public static void modelCleaning(SemanticModel currentModel, DirectedWeightedMultigraph G) throws Exception {
@@ -40,9 +43,6 @@ public class ModelRefinement {
                     currentModel.getGraph().removeVertex(cur);
                     clean2Node.remove(cur);
                 }
-                else{
-                    continue;
-                }
             }
         }
         for (InternalNode cur : clean2Node) {
@@ -51,10 +51,5 @@ public class ModelRefinement {
                 currentModel.getGraph().removeVertex(cur);
             }
         }
-    }
-
-
-    public static void modelRefine(SemanticModel currentModel, DirectedWeightedMultigraph G){
-
     }
 }

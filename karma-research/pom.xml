@@ -40,6 +40,22 @@
 		    <artifactId>karma-offline</artifactId>
 		    <version>${project.version}</version>
 	    </dependency>
+
+		<dependency>
+			<groupId>me.xdrop</groupId>
+			<artifactId>fuzzywuzzy</artifactId>
+			<version>1.4.0</version>>
+		</dependency>
+		<dependency>
+			<groupId>com.github.shibing624</groupId>
+			<artifactId>similarity</artifactId>
+			<version>1.1.6</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.sharispe</groupId>
+			<artifactId>slib-sml</artifactId>
+			<version>0.9.1</version>
+		</dependency>
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-core</artifactId>
@@ -121,7 +137,7 @@
 			<scope>compile</scope>
 		</dependency>
 
-	</dependencies>
+    </dependencies>
 
     
 </project>
