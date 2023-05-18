@@ -4,13 +4,17 @@ import edu.isi.karma.modeling.alignment.SemanticModel;
 import edu.isi.karma.rep.alignment.ColumnNode;
 import edu.isi.karma.rep.alignment.InternalNode;
 import edu.isi.karma.rep.alignment.LabeledLink;
+import edu.isi.karma.rep.alignment.Node;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.xm.Similarity;
-import org.xm.tendency.word.HownetWordTendency;
 
-import java.util.ArrayList;
-import java.util.Set;
+import java.util.*;
 
+import static edu.isi.karma.research.dynamic.SelectSemanticTypes.getCurrentInternalNodesQuantity;
+
+/**
+ * @author chl
+ */
 public class ScoringFunction {
 
 
@@ -18,55 +22,102 @@ public class ScoringFunction {
         double score = 0.0;
         double pinYinScore = Similarity.pinyinSimilarity(s1, s2);
         double charBasedScore = Similarity.charBasedSimilarity(s1, s2);
-        score = 2 * pinYinScore * charBasedScore / (pinYinScore + charBasedScore) ;
+        score = 2 * pinYinScore * charBasedScore / (pinYinScore + charBasedScore);
         return score;
     }
 
-    public static double score4InternalNode(SemanticModel currentModel, InternalNode in, ColumnNode cn,
-                                            DirectedWeightedMultigraph G, ArrayList<LabeledLink> links) {
+    public static boolean judgeSubGraph(SemanticModel currentModel, InternalNode judgingInternalNode,
+                                        ArrayList<String> linksTriples) {
+        DirectedWeightedMultigraph<Node, LabeledLink> currentGraph = currentModel.getGraph();
+        boolean flag = false;
+        for (LabeledLink ll : currentGraph.outgoingEdgesOf(judgingInternalNode)) {
+            if (linksTriples.contains(ll.getTarget().getUri() + ll.getUri() + ll.getSource().getUri())) {
+                flag = true;
+                if (ll.getTarget() instanceof InternalNode) {
+                    flag = judgeSubGraph(currentModel, (InternalNode) ll.getTarget(), linksTriples);
+                    if (!flag) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return flag;
+    }
+
+    public static double score4InternalNode(SemanticModel currentModel, InternalNode scoreNode, ColumnNode att,
+                                            ArrayList<LabeledLink> links) {
         double score = 0.0;
-        String inUri = in.getUri();
-        String cnUri = cn.getUri();
-
-
-        double nameSimilarity1 = getNameSimilarity(inUri,cnUri);
-        int linkNum = links.size();
+        double nameSimilarityScore = 0.0;
         double weightScore = 0.0;
         double coherenceScore = 0.0;
-        for(LabeledLink ll : links){
+        double subGraphScore = 0.0;
+        String scoreNodeUri = scoreNode.getUri();
+        String attUri = att.getUri();
+        int linkNum = links.size();
+        DirectedWeightedMultigraph<Node, LabeledLink> currentGraph = currentModel.getGraph();
+
+        double nameSimilarity1 = getNameSimilarity(scoreNodeUri, attUri);
+        double nameSimilarity2 = 0.0;
+        for (LabeledLink ll : links) {
             weightScore += ll.getWeight();
-//            coherenceScore +=
+            coherenceScore += ll.getSource().getModelIds().size();
+            nameSimilarity2 += getNameSimilarity(attUri, ll.getSource().getUri());
+            nameSimilarity2 += getNameSimilarity(attUri, ll.getUri());
         }
+        nameSimilarity2 = nameSimilarity2 / (2 * linkNum);
+        nameSimilarityScore = nameSimilarity1 + nameSimilarity2;
+        weightScore = weightScore / linkNum;
+        coherenceScore = coherenceScore / linkNum;
+
+        if (linkNum == 1) {
+            for (LabeledLink ll : currentGraph.edgeSet()) {
+                if (ll.getUri().equals(links.get(0).getUri()) &&
+                        ll.getSource().getUri().equals(scoreNodeUri)) {
+                    subGraphScore += 1;
+                }
+            }
+        } else {
+            ArrayList<String> linksTriples = new ArrayList<>();
+            for (LabeledLink ll : links) {
+                linksTriples.add(ll.getTarget().getUri() + ll.getUri() + ll.getSource().getUri());
+            }
+            for (InternalNode in : currentModel.getInternalNodes()) {
+                if (in.getUri().equals(scoreNodeUri)) {
+                    if (judgeSubGraph(currentModel, in, linksTriples)) {
+                        subGraphScore += 1;
+                    }
+                }
+            }
+        }
+
+        score = nameSimilarityScore + weightScore + coherenceScore + subGraphScore;
         return score;
     }
-    public static double score4SemanticModel(SemanticModel currentModel) {
+
+    public static double score4SemanticModel(SemanticModel currentModel,
+                                             DirectedWeightedMultigraph<Node, LabeledLink> G,
+                                             HashMap<String, Integer> internalNodesQuantityLimit) {
         double score = 0.0;
         Set<InternalNode> internalNodes = currentModel.getInternalNodes();
-        for (InternalNode in : internalNodes) {
-
+        List<ColumnNode> clumnNodes = currentModel.getColumnNodes();
+        //计算模型的属性与其相连的类节点之间的相似度分数(包含了coherence，weight，subGraphScore)
+        double internalNodeScore = 0.0;
+        for (ColumnNode cn : clumnNodes) {
+            Object[] cnLink = currentModel.getGraph().incomingEdgesOf(cn).toArray();
+            ArrayList<LabeledLink> links = new ArrayList<>();
+            InternalNode cnInternalNode = (InternalNode) ((LabeledLink) cnLink[0]).getSource();
+            links.add((LabeledLink) cnLink[0]);
+            internalNodeScore += score4InternalNode(currentModel, cnInternalNode, cn, links);
         }
-
+        //计算模型QuantityLimit分数
+        double quantityLimitScore = 0.0;
+        HashMap<String, Integer> curNodesQuantity = getCurrentInternalNodesQuantity(currentModel);
+        for(Map.Entry<String , Integer> entry : curNodesQuantity.entrySet()){
+            if(entry.getValue() > internalNodesQuantityLimit.get(entry.getKey())){
+                quantityLimitScore -= 1;
+            }
+        }
+        score = internalNodeScore + quantityLimitScore;
         return score;
-    }
-
-    public static void main(String[] args) {
-        String word1 = "death";
-        String word2 = "deathYear";
-        double cilinSimilarityResult = Similarity.cilinSimilarity(word1, word2);
-        double pinyinSimilarityResult = Similarity.pinyinSimilarity(word1, word2);
-        double conceptSimilarityResult = Similarity.conceptSimilarity(word1, word2);
-        double charBasedSimilarityResult = Similarity.charBasedSimilarity(word1, word2);
-
-        System.out.println(word1 + " vs " + word2 + " 词林相似度值：" + cilinSimilarityResult);
-        System.out.println(word1 + " vs " + word2 + " 拼音相似度值：" + pinyinSimilarityResult);
-        System.out.println(word1 + " vs " + word2 + " 概念相似度值：" + conceptSimilarityResult);
-        System.out.println(word1 + " vs " + word2 + " 字面相似度值：" + charBasedSimilarityResult);
-        double result = Similarity.phraseSimilarity(word1, word2);
-        System.out.println(result);
-        HownetWordTendency hownet = new HownetWordTendency();
-        double sim = hownet.getTendency(word1);
-        System.out.println(word1 + ":" + sim);
-        System.out.println(word2 + hownet.getTendency(word2));
-
     }
 }
